@@ -3,7 +3,7 @@ import { createMemo, createSignal } from 'solid-js'
 import { AccelerationProfileChart } from './components/AccelerationProfileChart'
 import { InputPanel } from './components/InputPanel'
 import { SummaryPanel } from './components/SummaryPanel'
-import { computeProfile } from './utils/physics'
+import { computeProfile } from './lib/physics'
 
 export const AppUI: Component = () => {
   const [impactSpeed, setImpactSpeed] = createSignal(6) // m/s
@@ -35,29 +35,30 @@ export const AppUI: Component = () => {
     <div class="min-h-screen bg-slate-50 text-gray-900">
       <div class="max-w-5xl mx-auto py-8 px-4 space-y-6">
         <header class="space-y-2">
-          <h1 class="text-3xl font-bold tracking-tight">Jerk-limited Harness Impact Visualizer</h1>
+          <h1 class="md:text-3xl text-xl font-bold tracking-tight">
+            Paragliding Harness Back Protector Visualizer
+          </h1>
           <p class="text-gray-600">
-            Explore 3-stage deceleration profiles (linear up, constant, linear down) with limits on
-            jerk and peak G.
+            Visualize jerk and G limited paragliding harness back protectors.
           </p>
-          <p class="text-sm text-gray-600">
-            <strong>Open source.</strong> Source code on{' '}
+          <p class="text-gray-600">
+            This is an{' '}
             <a
               href="https://github.com/hyperknot/harnessvis"
               target="_blank"
               rel="noopener noreferrer"
               class="text-blue-600 hover:underline"
             >
-              GitHub
-            </a>
-            . Physics verified in{' '}
+              open source
+            </a>{' '}
+            project by Zsolt Ero. Physics is in{' '}
             <a
               href="https://github.com/hyperknot/harnessvis/blob/main/fe/src/utils/physics.ts"
               target="_blank"
               rel="noopener noreferrer"
               class="text-blue-600 hover:underline"
             >
-              physics.ts
+              this file
             </a>
             .
           </p>

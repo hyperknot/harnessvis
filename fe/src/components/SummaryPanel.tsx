@@ -1,7 +1,7 @@
 import type { Component } from 'solid-js'
 import { createSignal } from 'solid-js'
 import type { PhysicsResult } from '../types/physics'
-import { calculateFoamThickness } from '../utils/physics'
+import { calculateFoamThickness } from '../lib/physics'
 
 interface SummaryPanelProps {
   result: PhysicsResult
