@@ -5,6 +5,7 @@ import { calculateFoamThickness } from '../utils/physics'
 
 interface SummaryPanelProps {
   result: PhysicsResult
+  class?: string
 }
 
 export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
@@ -21,7 +22,9 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
   }
 
   return (
-    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-4">
+    <section
+      class={`bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-4 ${props.class || ''}`}
+    >
       <h2 class="text-lg font-semibold">Profile summary</h2>
 
       <div class="grid gap-3 text-sm">
@@ -87,11 +90,11 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
         </div>
 
         {/* STOPPING DISTANCE - Main highlight */}
-        <div class="flex justify-between items-center py-2 border-t border-b border-gray-200 mt-2">
-          <span class="text-gray-700 font-medium">Min theoretical protector thickness:</span>
-          <span class="text-2xl font-bold text-blue-600">
+        <div class="py-2 border-t border-b border-gray-200 mt-2 space-y-1">
+          <div class="text-gray-700 text-xs font-medium">Min theoretical protector thickness:</div>
+          <div class="text-xl font-bold text-blue-600">
             {props.result.stopDistance ? `${(props.result.stopDistance * 100).toFixed(2)} cm` : '—'}
-          </span>
+          </div>
         </div>
 
         {/* Foam compression factor input */}
@@ -100,11 +103,12 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
           <div class="flex items-center gap-2">
             <input
               type="number"
+              inputmode="decimal"
               min="0"
               step="5"
               value={compressionFactor()}
               onInput={handleCompressionInput}
-              class="w-20 rounded-md border border-gray-300 px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-20 rounded-md border border-gray-300 px-2 py-1 text-base text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <span class="text-sm text-gray-600">%</span>
           </div>

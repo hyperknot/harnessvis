@@ -33,7 +33,7 @@ export const AccelerationProfileChart: Component<AccelerationProfileChartProps> 
 
     const option: echarts.EChartsOption = {
       animation: false,
-      grid: { left: 50, right: 20, top: 30, bottom: 45 },
+      grid: { left: 50, right: 20, top: 20, bottom: 50 },
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'line' },
@@ -47,6 +47,8 @@ export const AccelerationProfileChart: Component<AccelerationProfileChartProps> 
       xAxis: {
         type: 'value',
         name: 'Time (ms)',
+        nameLocation: 'middle',
+        nameGap: 30,
         min: 0,
         max: maxTimeMs || undefined,
         axisLabel: { formatter: (value: number) => value.toFixed(1) },

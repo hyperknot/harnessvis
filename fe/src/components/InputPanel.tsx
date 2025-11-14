@@ -19,7 +19,7 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
   }
 
   return (
-    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-4">
+    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-4 order-1">
       <h2 class="text-lg font-semibold">Inputs</h2>
 
       <div class="grid gap-4 sm:grid-cols-2">
@@ -28,13 +28,14 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
           <div class="flex items-center gap-2">
             <input
               type="number"
+              inputmode="decimal"
               min="0"
               step="0.1"
               value={props.impactSpeed}
               onInput={(e) => props.onImpactSpeedChange(parseNumberInput(e))}
-              class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <span class="text-sm text-gray-500">m/s</span>
+            <span class="text-sm text-gray-500 whitespace-nowrap">m/s</span>
           </div>
           <span class="text-xs text-gray-500">
             Vertical speed at impact (e.g. 6 m/s ≈ EN drop test)
@@ -46,13 +47,14 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
           <div class="flex items-center gap-2">
             <input
               type="number"
+              inputmode="decimal"
               min="1"
               step="50"
               value={props.jerkG}
               onInput={(e) => props.onJerkGChange(parseNumberInput(e))}
-              class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <span class="text-sm text-gray-500">G/s</span>
+            <span class="text-sm text-gray-500 whitespace-nowrap">G/s</span>
           </div>
           <span class="text-xs text-gray-500">
             Rate of onset limit (e.g. 1300 G/s from NASA study)
@@ -64,13 +66,14 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
           <div class="flex items-center gap-2">
             <input
               type="number"
+              inputmode="decimal"
               min="1"
               step="1"
               value={props.maxG}
               onInput={(e) => props.onMaxGChange(parseNumberInput(e))}
-              class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <span class="text-sm text-gray-500">G</span>
+            <span class="text-sm text-gray-500 whitespace-nowrap">G</span>
           </div>
           <span class="text-xs text-gray-500">Peak deceleration cap (e.g. EN 35 G)</span>
         </label>
@@ -80,13 +83,14 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
           <div class="flex items-center gap-2">
             <input
               type="number"
+              inputmode="decimal"
               min="0"
               step="0.5"
               value={props.maxGTimeMs}
               onInput={(e) => props.onMaxGTimeMsChange(parseNumberInput(e))}
-              class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <span class="text-sm text-gray-500">ms</span>
+            <span class="text-sm text-gray-500 whitespace-nowrap">ms</span>
           </div>
           <span class="text-xs text-gray-500">Allowable time at the max G plateau (e.g. 7 ms)</span>
         </label>
