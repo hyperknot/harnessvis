@@ -94,7 +94,7 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
             <span class="text-sm text-gray-500 whitespace-nowrap">%</span>
           </div>
           <span class="text-xs text-gray-500">
-            How much foam can compress (e.g. 75% compression limit)
+            How much foam can compress, before bottoming out
           </span>
         </label>
       </div>
