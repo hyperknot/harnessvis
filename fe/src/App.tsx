@@ -10,6 +10,7 @@ export const AppUI: Component = () => {
   const [impactSpeed, setImpactSpeed] = createSignal(6) // m/s
   const [jerkG, setJerkG] = createSignal(1300) // G/s
   const [maxG, setMaxG] = createSignal(42) // G
+  const [compressionFactor, setCompressionFactor] = createSignal(75) // %
 
   const result = createMemo(() =>
     computeProfile({
@@ -75,7 +76,7 @@ export const AppUI: Component = () => {
           </section>
 
           {/* Full-width thickness panel */}
-          <ThicknessPanel result={result()} />
+          <ThicknessPanel result={result()} compressionFactor={compressionFactor()} />
 
           {/* Input (left) + summary (right) on desktop */}
           <div class="grid gap-3 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start">
@@ -83,9 +84,11 @@ export const AppUI: Component = () => {
               impactSpeed={impactSpeed()}
               jerkG={jerkG()}
               maxG={maxG()}
+              compressionFactor={compressionFactor()}
               onImpactSpeedChange={setImpactSpeed}
               onJerkGChange={setJerkG}
               onMaxGChange={setMaxG}
+              onCompressionFactorChange={setCompressionFactor}
               errorMessage={!result().ok ? result().reason : undefined}
             />
 

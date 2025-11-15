@@ -4,9 +4,11 @@ interface InputPanelProps {
   impactSpeed: number
   jerkG: number
   maxG: number
+  compressionFactor: number
   onImpactSpeedChange: (value: number) => void
   onJerkGChange: (value: number) => void
   onMaxGChange: (value: number) => void
+  onCompressionFactorChange: (value: number) => void
   errorMessage?: string
 }
 
@@ -46,7 +48,7 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
             <input
               type="number"
               inputmode="decimal"
-              min="1"
+              min="0"
               step="50"
               value={props.jerkG}
               onInput={(e) => props.onJerkGChange(parseNumberInput(e))}
@@ -74,6 +76,26 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
             <span class="text-sm text-gray-500 whitespace-nowrap">G</span>
           </div>
           <span class="text-xs text-gray-500">Peak deceleration cap (e.g. EN 42 G)</span>
+        </label>
+
+        <label class="flex flex-col gap-1">
+          <span class="text-sm font-medium text-gray-700">Max foam compression</span>
+          <div class="flex items-center gap-2">
+            <input
+              type="number"
+              inputmode="decimal"
+              min="1"
+              max="99"
+              step="1"
+              value={props.compressionFactor}
+              onInput={(e) => props.onCompressionFactorChange(parseNumberInput(e))}
+              class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <span class="text-sm text-gray-500 whitespace-nowrap">%</span>
+          </div>
+          <span class="text-xs text-gray-500">
+            How much foam can compress (e.g. 75% compression limit)
+          </span>
         </label>
       </div>
 
