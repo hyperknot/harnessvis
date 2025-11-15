@@ -77,7 +77,8 @@ export const AppUI: Component = () => {
             errorMessage={!result().ok ? result().reason : undefined}
           />
 
-          <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-3 order-3 md:order-2">
+          {/* Graph: 2nd on mobile, 2nd on md+ */}
+          <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-3 order-2 md:order-2">
             <div class="space-y-1">
               <h2 class="text-lg font-semibold">Acceleration profile</h2>
               <p class="text-xs text-gray-500">{getProfileShapeDescription()}</p>
@@ -85,7 +86,8 @@ export const AppUI: Component = () => {
             <AccelerationProfileChart samples={result().samples} />
           </section>
 
-          <SummaryPanel result={result()} class="order-2 md:order-3" />
+          {/* Summary: 3rd on mobile, 3rd on md+ */}
+          <SummaryPanel result={result()} class="order-3 md:order-3" />
         </div>
       </div>
     </div>
