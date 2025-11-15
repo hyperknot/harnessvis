@@ -23,12 +23,12 @@ export const AppUI: Component = () => {
   const getProfileShapeDescription = () => {
     const type = result().profileType
     if (type === 'triangular') {
-      return 'Shape: linear up, linear down (no constant phase)'
+      return 'linear up, linear down (no constant phase)'
     }
     if (type === 'trapezoidal') {
-      return 'Shape: linear up, constant, linear down'
+      return 'linear up, constant, linear down'
     }
-    return 'Shape: —'
+    return ''
   }
 
   return (
