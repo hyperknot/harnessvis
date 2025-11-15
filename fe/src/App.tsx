@@ -51,7 +51,7 @@ export const AppUI: Component = () => {
             </a>{' '}
             project by Zsolt Ero. Physics is in{' '}
             <a
-              href="https://github.com/hyperknot/harnessvis/blob/main/fe/src/utils/physics.ts"
+              href="https://github.com/hyperknot/harnessvis/blob/main/fe/src/lib/physics.ts"
               target="_blank"
               rel="noopener noreferrer"
               class="text-blue-600 hover:underline"

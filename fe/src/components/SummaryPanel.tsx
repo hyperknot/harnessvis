@@ -21,6 +21,11 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
     return calculateFoamThickness(props.result.stopDistance * 100, compressionFactor())
   }
 
+  // Check if values exceed proposed EN limits
+  const isOver38GLimit = () => props.result.timeOver38G >= 0.007 // 7 ms
+  const isOver20GLimit = () => props.result.timeOver20G >= 0.025 // 25 ms
+  const isOverAnyLimit = () => isOver38GLimit() || isOver20GLimit()
+
   return (
     <section
       class={`bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-4 ${props.class || ''}`}
@@ -82,17 +87,24 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
         <div class="py-2 border-t border-gray-200 mt-2 space-y-2">
           <div class="flex justify-between">
             <span class="text-gray-600">Time over 38 G:</span>
-            <span class="font-semibold">
+            <span class={`font-semibold ${isOver38GLimit() ? 'text-red-600' : ''}`}>
               {props.result.timeOver38G ? (props.result.timeOver38G * 1000).toFixed(2) : '0.00'} ms
             </span>
           </div>
           <div class="flex justify-between">
             <span class="text-gray-600">Time over 20 G:</span>
-            <span class="font-semibold">
+            <span class={`font-semibold ${isOver20GLimit() ? 'text-red-600' : ''}`}>
               {props.result.timeOver20G ? (props.result.timeOver20G * 1000).toFixed(2) : '0.00'} ms
             </span>
           </div>
         </div>
+
+        {/* Warning message if over EN limits */}
+        {isOverAnyLimit() && (
+          <div class="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-800">
+            ⚠️ Over proposed EN limits (38 G for ≥7 ms or 20 G for ≥25 ms)
+          </div>
+        )}
 
         {/* STOPPING DISTANCE - Main highlight */}
         <div class="py-2 border-t border-b border-gray-200 mt-2 space-y-1">
