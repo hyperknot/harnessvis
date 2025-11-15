@@ -258,13 +258,9 @@ function calculateTimeOverThresholds(
 /**
  * Calculate required uncompressed foam thickness based on max compression percentage.
  *
- * Physics: If foam compresses by `compressionFactor` percent, then:
- *   - Compression distance = uncompressed thickness × (compressionFactor / 100)
- *   - Therefore: uncompressed thickness = compression distance / (compressionFactor / 100)
- *
  * Example: Need 10 cm compression, foam compresses 70%
  *   → Required thickness = 10 / 0.70 = 14.29 cm
- *   → When compressed 70%, goes from 14.29 to 4.29 cm (compressed 10 cm) ✓
+ *   → When compressed 70%, goes from 14.29 to 4.29 cm (compressed 10 cm)
  *
  * @param minTheoreticalThickness - Required compression distance (cm)
  * @param compressionFactor - Max compression percentage (e.g., 70 means foam can compress to 30% of original)
