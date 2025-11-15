@@ -19,7 +19,7 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
   }
 
   return (
-    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-4 order-1">
+    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-4">
       <h2 class="text-lg font-semibold">Inputs</h2>
 
       <div class="grid gap-4 sm:grid-cols-2">
@@ -75,7 +75,7 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
             />
             <span class="text-sm text-gray-500 whitespace-nowrap">G</span>
           </div>
-          <span class="text-xs text-gray-500">Peak deceleration cap (e.g. EN 35 G)</span>
+          <span class="text-xs text-gray-500">Peak deceleration cap (e.g. EN 42 G)</span>
         </label>
 
         <label class="flex flex-col gap-1">

@@ -8,7 +8,7 @@ import { computeProfile } from './lib/physics'
 export const AppUI: Component = () => {
   const [impactSpeed, setImpactSpeed] = createSignal(6) // m/s
   const [jerkG, setJerkG] = createSignal(1300) // G/s
-  const [maxG, setMaxG] = createSignal(35) // G
+  const [maxG, setMaxG] = createSignal(42) // G
   const [maxGTimeMs, setMaxGTimeMs] = createSignal(7) // ms
 
   const result = createMemo(() =>
@@ -64,30 +64,33 @@ export const AppUI: Component = () => {
           </p>
         </header>
 
-        <div class="grid gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start">
-          <InputPanel
-            impactSpeed={impactSpeed()}
-            jerkG={jerkG()}
-            maxG={maxG()}
-            maxGTimeMs={maxGTimeMs()}
-            onImpactSpeedChange={setImpactSpeed}
-            onJerkGChange={setJerkG}
-            onMaxGChange={setMaxG}
-            onMaxGTimeMsChange={setMaxGTimeMs}
-            errorMessage={!result().ok ? result().reason : undefined}
-          />
+        {/* Content layout */}
+        <div class="space-y-6">
+          {/* Top row: input (left) + summary (right) on desktop */}
+          <div class="grid gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start">
+            <InputPanel
+              impactSpeed={impactSpeed()}
+              jerkG={jerkG()}
+              maxG={maxG()}
+              maxGTimeMs={maxGTimeMs()}
+              onImpactSpeedChange={setImpactSpeed}
+              onJerkGChange={setJerkG}
+              onMaxGChange={setMaxG}
+              onMaxGTimeMsChange={setMaxGTimeMs}
+              errorMessage={!result().ok ? result().reason : undefined}
+            />
 
-          {/* Graph: 2nd on mobile, 2nd on md+ */}
-          <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-3 order-2 md:order-2">
+            <SummaryPanel result={result()} />
+          </div>
+
+          {/* Full-width chart below on all viewports */}
+          <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-3">
             <div class="space-y-1">
               <h2 class="text-lg font-semibold">Acceleration profile</h2>
               <p class="text-xs text-gray-500">{getProfileShapeDescription()}</p>
             </div>
             <AccelerationProfileChart samples={result().samples} />
           </section>
-
-          {/* Summary: 3rd on mobile, 3rd on md+ */}
-          <SummaryPanel result={result()} class="order-3 md:order-3" />
         </div>
       </div>
     </div>
