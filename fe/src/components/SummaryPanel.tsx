@@ -1,7 +1,7 @@
 import type { Component } from 'solid-js'
 import { createSignal } from 'solid-js'
-import type { PhysicsResult } from '../types/physics'
 import { calculateFoamThickness } from '../lib/physics'
+import type { PhysicsResult } from '../types/physics'
 
 interface SummaryPanelProps {
   result: PhysicsResult
@@ -78,15 +78,20 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
           </span>
         </div>
 
-        <div class="flex justify-between">
-          <span class="text-gray-600">Time at max G plateau:</span>
-          <span class="font-semibold">
-            {props.result.timeAtOrAboveLimit
-              ? (props.result.timeAtOrAboveLimit * 1000).toFixed(2)
-              : '0.00'}{' '}
-            ms (limit: {props.result.maxGTimeMs.toFixed(1)} ms)
-            {!props.result.gTimeOk && ' ⚠️'}
-          </span>
+        {/* Time over thresholds - read-only measurements */}
+        <div class="py-2 border-t border-gray-200 mt-2 space-y-2">
+          <div class="flex justify-between">
+            <span class="text-gray-600">Time over 38 G:</span>
+            <span class="font-semibold">
+              {props.result.timeOver38G ? (props.result.timeOver38G * 1000).toFixed(2) : '0.00'} ms
+            </span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">Time over 20 G:</span>
+            <span class="font-semibold">
+              {props.result.timeOver20G ? (props.result.timeOver20G * 1000).toFixed(2) : '0.00'} ms
+            </span>
+          </div>
         </div>
 
         {/* STOPPING DISTANCE - Main highlight */}

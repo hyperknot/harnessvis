@@ -6,7 +6,6 @@ export interface PhysicsInput {
   v0: number // impact speed (m/s)
   jerkG: number // jerk limit (G/s)
   maxG: number // max allowed G
-  maxGTimeMs: number // max allowed time at/above max G (ms)
 }
 
 export interface SamplePoint {
@@ -23,7 +22,6 @@ export interface PhysicsResult {
   v0: number
   jerkG: number
   maxG: number
-  maxGTimeMs: number
 
   jerk: number // m/s^3
   peakG: number
@@ -35,8 +33,8 @@ export interface PhysicsResult {
   stopDistance: number // m
 
   gLimitReached: boolean
-  timeAtOrAboveLimit: number // s
-  gTimeOk: boolean
+  timeOver38G: number // time spent over 38G (s)
+  timeOver20G: number // time spent over 20G (s)
 
   samples: Array<SamplePoint>
 }

@@ -9,14 +9,12 @@ export const AppUI: Component = () => {
   const [impactSpeed, setImpactSpeed] = createSignal(6) // m/s
   const [jerkG, setJerkG] = createSignal(1300) // G/s
   const [maxG, setMaxG] = createSignal(42) // G
-  const [maxGTimeMs, setMaxGTimeMs] = createSignal(7) // ms
 
   const result = createMemo(() =>
     computeProfile({
       v0: impactSpeed(),
       jerkG: jerkG(),
       maxG: maxG(),
-      maxGTimeMs: maxGTimeMs(),
     }),
   )
 
@@ -72,11 +70,9 @@ export const AppUI: Component = () => {
               impactSpeed={impactSpeed()}
               jerkG={jerkG()}
               maxG={maxG()}
-              maxGTimeMs={maxGTimeMs()}
               onImpactSpeedChange={setImpactSpeed}
               onJerkGChange={setJerkG}
               onMaxGChange={setMaxG}
-              onMaxGTimeMsChange={setMaxGTimeMs}
               errorMessage={!result().ok ? result().reason : undefined}
             />
 

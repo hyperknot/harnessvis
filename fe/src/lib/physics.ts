@@ -26,14 +26,12 @@ const SAMPLE_COUNT = 300
  *  - impact speed (v0)
  *  - jerk limit (jerkG, in G/s)
  *  - peak G limit (maxG)
- *  - allowed time at maxG (maxGTimeMs)
  */
 export function computeProfile(input: PhysicsInput): PhysicsResult {
   // Clamp inputs to non‑negative values
   const v0 = Math.max(input.v0, 0)
   const jerkG = Math.max(input.jerkG, 0)
   const maxG = Math.max(input.maxG, 0)
-  const maxGTime = Math.max(input.maxGTimeMs, 0) / 1000 // seconds
 
   const baseResult: PhysicsResult = {
     ok: false,
@@ -42,7 +40,6 @@ export function computeProfile(input: PhysicsInput): PhysicsResult {
     v0,
     jerkG,
     maxG,
-    maxGTimeMs: input.maxGTimeMs,
     jerk: 0,
     peakG: 0,
     peakA: 0,
@@ -51,8 +48,8 @@ export function computeProfile(input: PhysicsInput): PhysicsResult {
     totalTime: 0,
     stopDistance: 0,
     gLimitReached: false,
-    timeAtOrAboveLimit: 0,
-    gTimeOk: true,
+    timeOver38G: 0,
+    timeOver20G: 0,
     samples: [],
   }
 
@@ -125,10 +122,7 @@ export function computeProfile(input: PhysicsInput): PhysicsResult {
 
   const stopDistance = s1 + s2 + s3
 
-  // Time at or above maxG (for this 3‑stage profile, that’s the plateau only)
   const gLimitReached = profileType === 'trapezoidal'
-  const timeAtOrAboveLimit = gLimitReached ? t2 : 0
-  const gTimeOk = timeAtOrAboveLimit <= maxGTime + EPSILON
 
   // Build time‑series samples for charting
   const samples = buildSamples({
@@ -143,6 +137,9 @@ export function computeProfile(input: PhysicsInput): PhysicsResult {
     g,
   })
 
+  // Calculate time spent over 38G and 20G
+  const { timeOver38G, timeOver20G } = calculateTimeOverThresholds(samples, totalTime)
+
   return {
     ...baseResult,
     ok: true,
@@ -156,8 +153,8 @@ export function computeProfile(input: PhysicsInput): PhysicsResult {
     totalTime,
     stopDistance,
     gLimitReached,
-    timeAtOrAboveLimit,
-    gTimeOk,
+    timeOver38G,
+    timeOver20G,
     samples,
   }
 }
@@ -232,7 +229,34 @@ function buildSamples(params: {
 }
 
 /**
- * Apply a simple percentage “compression factor” to convert a theoretical
+ * Calculate time spent over 38G and 20G thresholds
+ */
+function calculateTimeOverThresholds(
+  samples: Array<SamplePoint>,
+  totalTime: number,
+): { timeOver38G: number; timeOver20G: number } {
+  if (samples.length < 2) {
+    return { timeOver38G: 0, timeOver20G: 0 }
+  }
+
+  const dt = totalTime / (samples.length - 1)
+  let timeOver38G = 0
+  let timeOver20G = 0
+
+  for (const sample of samples) {
+    if (sample.aG > 38) {
+      timeOver38G += dt
+    }
+    if (sample.aG > 20) {
+      timeOver20G += dt
+    }
+  }
+
+  return { timeOver38G, timeOver20G }
+}
+
+/**
+ * Apply a simple percentage "compression factor" to convert a theoretical
  * compressible distance to a required foam thickness.
  *
  * Example: minTheoreticalThickness = 0.13 m, compressionFactor = 20 (%)
