@@ -2,8 +2,8 @@ import type { Component } from 'solid-js'
 import { createMemo, createSignal } from 'solid-js'
 import { AccelerationProfileChart } from './components/AccelerationProfileChart'
 import { InputPanel } from './components/InputPanel'
+import { StatsPanel } from './components/StatsPanel'
 import { SummaryPanel } from './components/SummaryPanel'
-import { ThicknessPanel } from './components/ThicknessPanel'
 import { computeProfile } from './lib/physics'
 
 export const AppUI: Component = () => {
@@ -76,9 +76,8 @@ export const AppUI: Component = () => {
           </section>
 
           {/* Full-width thickness panel */}
-          <ThicknessPanel result={result()} compressionFactor={compressionFactor()} />
+          <SummaryPanel result={result()} compressionFactor={compressionFactor()} />
 
-          {/* Input (left) + summary (right) on desktop */}
           <div class="grid gap-3 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start">
             <InputPanel
               impactSpeed={impactSpeed()}
@@ -92,7 +91,7 @@ export const AppUI: Component = () => {
               errorMessage={!result().ok ? result().reason : undefined}
             />
 
-            <SummaryPanel result={result()} />
+            <StatsPanel result={result()} />
           </div>
         </div>
       </div>
