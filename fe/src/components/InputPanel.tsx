@@ -38,7 +38,7 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
             <span class="text-sm text-gray-500 whitespace-nowrap">m/s</span>
           </div>
           <span class="text-xs text-gray-500">
-            Vertical speed at impact (e.g. 6 m/s ≈ EN drop test)
+            Vertical speed at impact (e.g. 5.7 m/s ≈ EN drop test)
           </span>
         </label>
 

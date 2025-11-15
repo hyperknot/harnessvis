@@ -7,7 +7,7 @@ import { ThicknessPanel } from './components/ThicknessPanel'
 import { computeProfile } from './lib/physics'
 
 export const AppUI: Component = () => {
-  const [impactSpeed, setImpactSpeed] = createSignal(6) // m/s
+  const [impactSpeed, setImpactSpeed] = createSignal(5.7) // m/s
   const [jerkG, setJerkG] = createSignal(1300) // G/s
   const [maxG, setMaxG] = createSignal(42) // G
   const [compressionFactor, setCompressionFactor] = createSignal(75) // %
