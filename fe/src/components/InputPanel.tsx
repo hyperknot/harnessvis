@@ -17,7 +17,7 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
   }
 
   return (
-    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-4">
+    <section class="bg-white rounded-xl shadow-sm border border-gray-200 py-2 px-3 space-y-4">
       <h2 class="text-lg font-semibold">Inputs</h2>
 
       <div class="grid gap-4 sm:grid-cols-2">

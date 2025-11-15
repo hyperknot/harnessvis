@@ -21,20 +21,24 @@ export const ThicknessPanel: Component<ThicknessPanelProps> = (props) => {
   }
 
   return (
-    <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-      <div class="flex flex-wrap items-center justify-around gap-6">
+    <section class="bg-white rounded-lg shadow-sm border border-gray-200 py-2 px-3">
+      <div class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-around gap-1 sm:gap-3 md:gap-4">
         {/* Min theoretical thickness */}
-        <div class="flex flex-col items-center gap-1">
-          <span class="text-sm text-gray-600">Min theoretical protector thickness:</span>
-          <span class="text-2xl font-bold text-blue-600">
+        <div class="flex flex-col items-center">
+          <span class="text-[11px] sm:text-sm text-gray-600 text-center leading-tight">
+            Min theoretical protector thickness:
+          </span>
+          <span class="text-base sm:text-xl md:text-2xl font-bold text-blue-600">
             {props.result.stopDistance ? `${(props.result.stopDistance * 100).toFixed(2)} cm` : '—'}
           </span>
         </div>
 
         {/* Foam compression factor input */}
-        <div class="flex flex-col items-center gap-1">
-          <span class="text-sm text-gray-600">Foam compression factor:</span>
-          <div class="flex items-center gap-2">
+        <div class="flex flex-col items-center">
+          <span class="text-[11px] sm:text-sm text-gray-600 text-center leading-tight">
+            Foam compression factor:
+          </span>
+          <div class="flex items-center gap-1">
             <input
               type="number"
               inputmode="decimal"
@@ -42,16 +46,18 @@ export const ThicknessPanel: Component<ThicknessPanelProps> = (props) => {
               step="5"
               value={compressionFactor()}
               onInput={handleCompressionInput}
-              class="w-20 rounded-md border border-gray-300 px-2 py-1.5 text-base text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-14 sm:w-20 rounded border border-gray-300 px-1.5 py-0.5 sm:py-1 text-sm sm:text-base text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <span class="text-lg font-semibold text-gray-700">%</span>
+            <span class="text-sm sm:text-lg font-semibold text-gray-700">%</span>
           </div>
         </div>
 
         {/* Min foam protector thickness */}
-        <div class="flex flex-col items-center gap-1">
-          <span class="text-sm text-gray-600">Min foam protector thickness:</span>
-          <span class="text-2xl font-bold text-emerald-600">
+        <div class="flex flex-col items-center">
+          <span class="text-[11px] sm:text-sm text-gray-600 text-center leading-tight">
+            Min foam protector thickness:
+          </span>
+          <span class="text-base sm:text-xl md:text-2xl font-bold text-emerald-600">
             {props.result.stopDistance ? `${foamThickness().toFixed(2)} cm` : '—'}
           </span>
         </div>

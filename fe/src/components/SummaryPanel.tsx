@@ -14,7 +14,7 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
 
   return (
     <section
-      class={`bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-4 ${props.class || ''}`}
+      class={`bg-white rounded-xl shadow-sm border border-gray-200 py-2 px-3 space-y-4 ${props.class || ''}`}
     >
       <h2 class="text-lg font-semibold">Profile summary</h2>
 

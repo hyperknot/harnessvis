@@ -64,10 +64,10 @@ export const AppUI: Component = () => {
         </header>
 
         {/* Content layout */}
-        <div class="space-y-6">
+        <div class="space-y-3">
           {/* Full-width chart on top */}
-          <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-3">
-            <div class="space-y-1">
+          <section class="bg-white rounded-xl shadow-sm border border-gray-200 py-2 px-3 space-y-3">
+            <div>
               <h2 class="text-lg font-semibold">Acceleration profile</h2>
               <p class="text-xs text-gray-500">{getProfileShapeDescription()}</p>
             </div>
@@ -78,7 +78,7 @@ export const AppUI: Component = () => {
           <ThicknessPanel result={result()} />
 
           {/* Input (left) + summary (right) on desktop */}
-          <div class="grid gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start">
+          <div class="grid gap-3 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start">
             <InputPanel
               impactSpeed={impactSpeed()}
               jerkG={jerkG()}
