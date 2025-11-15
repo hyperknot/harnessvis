@@ -2,6 +2,8 @@
 
 ## Overview
 
+Visualize jerk and G limited paragliding harness back protectors.
+
 ## Live Website
 
 **[harnessvis.hyperknot.com](https://harnessvis.hyperknot.com)**

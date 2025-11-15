@@ -31,6 +31,20 @@ export const AccelerationProfileChart: Component<AccelerationProfileChartProps> 
     const data = (props.samples || []).map((p) => [p.t * 1000, p.aG])
     const maxTimeMs = data.length ? data[data.length - 1][0] : 0
 
+    // Find time ranges where acceleration exceeds thresholds
+    const findThresholdRange = (threshold: number): [number, number] | null => {
+      const points = data.filter(([_, aG]) => aG > threshold)
+      if (points.length === 0) return null
+
+      const startTime = points[0][0]
+      const endTime = points[points.length - 1][0]
+
+      return [startTime, endTime]
+    }
+
+    const range38G = findThresholdRange(38)
+    const range20G = findThresholdRange(20)
+
     const option: echarts.EChartsOption = {
       animation: false,
       grid: { left: 50, right: 20, top: 20, bottom: 50 },
@@ -50,12 +64,14 @@ export const AccelerationProfileChart: Component<AccelerationProfileChartProps> 
         nameLocation: 'middle',
         nameGap: 30,
         min: 0,
-        max: maxTimeMs || undefined,
+        max: Math.max(60, maxTimeMs),
         axisLabel: { formatter: (value: number) => value.toFixed(1) },
       },
       yAxis: {
         type: 'value',
         name: 'Acceleration (G)',
+        min: 0,
+        max: 45,
         axisLabel: { formatter: '{value}' },
         splitLine: { show: true },
       },
@@ -68,6 +84,38 @@ export const AccelerationProfileChart: Component<AccelerationProfileChartProps> 
           lineStyle: { width: 2, color: '#2563eb' },
           data,
         },
+        // Red line for >38G segment
+        ...(range38G
+          ? [
+              {
+                name: '38G Threshold',
+                type: 'line' as const,
+                symbol: 'none',
+                lineStyle: { width: 3, color: '#ef4444', type: 'solid' as const },
+                data: [
+                  [range38G[0], 38],
+                  [range38G[1], 38],
+                ],
+                tooltip: { show: false },
+              },
+            ]
+          : []),
+        // Orange line for >20G segment
+        ...(range20G
+          ? [
+              {
+                name: '20G Threshold',
+                type: 'line' as const,
+                symbol: 'none',
+                lineStyle: { width: 3, color: '#f97316', type: 'solid' as const },
+                data: [
+                  [range20G[0], 20],
+                  [range20G[1], 20],
+                ],
+                tooltip: { show: false },
+              },
+            ]
+          : []),
       ],
     }
 

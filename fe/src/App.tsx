@@ -3,6 +3,7 @@ import { createMemo, createSignal } from 'solid-js'
 import { AccelerationProfileChart } from './components/AccelerationProfileChart'
 import { InputPanel } from './components/InputPanel'
 import { SummaryPanel } from './components/SummaryPanel'
+import { ThicknessPanel } from './components/ThicknessPanel'
 import { computeProfile } from './lib/physics'
 
 export const AppUI: Component = () => {
@@ -64,7 +65,19 @@ export const AppUI: Component = () => {
 
         {/* Content layout */}
         <div class="space-y-6">
-          {/* Top row: input (left) + summary (right) on desktop */}
+          {/* Full-width chart on top */}
+          <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-3">
+            <div class="space-y-1">
+              <h2 class="text-lg font-semibold">Acceleration profile</h2>
+              <p class="text-xs text-gray-500">{getProfileShapeDescription()}</p>
+            </div>
+            <AccelerationProfileChart samples={result().samples} />
+          </section>
+
+          {/* Full-width thickness panel */}
+          <ThicknessPanel result={result()} />
+
+          {/* Input (left) + summary (right) on desktop */}
           <div class="grid gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start">
             <InputPanel
               impactSpeed={impactSpeed()}
@@ -78,15 +91,6 @@ export const AppUI: Component = () => {
 
             <SummaryPanel result={result()} />
           </div>
-
-          {/* Full-width chart below on all viewports */}
-          <section class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-3">
-            <div class="space-y-1">
-              <h2 class="text-lg font-semibold">Acceleration profile</h2>
-              <p class="text-xs text-gray-500">{getProfileShapeDescription()}</p>
-            </div>
-            <AccelerationProfileChart samples={result().samples} />
-          </section>
         </div>
       </div>
     </div>
