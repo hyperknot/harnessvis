@@ -50,6 +50,10 @@ export function computeProfile(input: PhysicsInput): PhysicsResult {
     gLimitReached: false,
     timeOver38G: 0,
     timeOver20G: 0,
+
+    hic15: 0,
+    hic36: 0,
+
     samples: [],
   }
 
@@ -140,6 +144,9 @@ export function computeProfile(input: PhysicsInput): PhysicsResult {
   // Calculate exact time spent over 38G and 20G using analytical formulas
   const { timeOver38G, timeOver20G } = calculateExactTimeOverThresholds(peakA, jerk, t1, t2, g)
 
+  const hic15 = computeHICWindow(samples, 0.015) // 15 ms
+  const hic36 = computeHICWindow(samples, 0.036) // 36 ms
+
   return {
     ...baseResult,
     ok: true,
@@ -155,6 +162,10 @@ export function computeProfile(input: PhysicsInput): PhysicsResult {
     gLimitReached,
     timeOver38G,
     timeOver20G,
+
+    hic15,
+    hic36,
+
     samples,
   }
 }
@@ -294,6 +305,63 @@ function calculateExactTimeOverThresholds(
     timeOver38G: calculateExactTimeOverThreshold(38, peakA, jerk, t1, t2, g),
     timeOver20G: calculateExactTimeOverThreshold(20, peakA, jerk, t1, t2, g),
   }
+}
+
+/**
+ * Compute HIC over a given time window (in seconds), e.g.
+ * - windowSeconds = 0.015 → HIC15
+ * - windowSeconds = 0.036 → HIC36
+ *
+ * Uses the standard formula:
+ *   HIC = max_{t1,t2} [ (t2 - t1) * (avg_a)^(2.5) ]
+ * where avg_a is the average acceleration in G over [t1, t2].
+ *
+ * We approximate the integral of a(t) with a trapezoidal rule over SamplePoint[].
+ */
+function computeHICWindow(samples: Array<SamplePoint>, windowSeconds: number): number {
+  if (samples.length < 2 || windowSeconds <= 0) return 0
+
+  const n = samples.length
+  const times = samples.map((s) => s.t)
+  const accG = samples.map((s) => Math.max(s.aG, 0)) // ensure non‑negative
+
+  // Build cumulative area under a(t) in G·s using trapezoidal rule
+  const areaPrefix = new Array<number>(n)
+  areaPrefix[0] = 0
+
+  for (let i = 1; i < n; i++) {
+    const dt = times[i] - times[i - 1]
+    if (dt <= 0) {
+      areaPrefix[i] = areaPrefix[i - 1]
+      continue
+    }
+    const avgA = 0.5 * (accG[i - 1] + accG[i])
+    areaPrefix[i] = areaPrefix[i - 1] + avgA * dt
+  }
+
+  let maxHic = 0
+
+  // Brute‑force all windows [i, j] with duration <= windowSeconds
+  // n is small (~300), so O(n^2) is fine.
+  for (let i = 0; i < n - 1; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const dt = times[j] - times[i]
+      if (dt <= 0) continue
+
+      // If we've exceeded the window, we can break since times[] is increasing
+      if (dt - windowSeconds > EPSILON) break
+
+      const area = areaPrefix[j] - areaPrefix[i] // ∫ a(t) dt over [i, j] in G·s
+      if (area <= 0) continue
+
+      const aAvg = area / dt // average acceleration in G over this window
+      const hic = dt * aAvg ** 2.5
+
+      if (hic > maxHic) maxHic = hic
+    }
+  }
+
+  return maxHic
 }
 
 /**

@@ -10,6 +10,7 @@ export const StatsPanel: Component<StatsPanelProps> = (props) => {
   // Check if values exceed proposed EN limits
   const isOver38GLimit = () => props.result.timeOver38G >= 0.007 // 7 ms
   const isOver20GLimit = () => props.result.timeOver20G >= 0.025 // 25 ms
+
   const isOverAnyLimit = () => isOver38GLimit() || isOver20GLimit()
 
   return (
@@ -77,6 +78,18 @@ export const StatsPanel: Component<StatsPanelProps> = (props) => {
             ⚠️ Over proposed EN limits (38 G for ≥7 ms or 20 G for ≥25 ms)
           </div>
         )}
+
+        {/* Head Injury Criterion (HIC) */}
+        <div class="py-2 border-t border-gray-200 mt-2 space-y-2">
+          <div class="flex justify-between">
+            <span class="text-gray-600">HIC15:</span>
+            <span class="font-semibold">{props.result.hic15.toFixed(0)}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-600">HIC36:</span>
+            <span class="font-semibold">{props.result.hic36.toFixed(0)}</span>
+          </div>
+        </div>
       </div>
     </section>
   )
