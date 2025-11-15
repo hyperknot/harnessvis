@@ -137,8 +137,8 @@ export function computeProfile(input: PhysicsInput): PhysicsResult {
     g,
   })
 
-  // Calculate time spent over 38G and 20G
-  const { timeOver38G, timeOver20G } = calculateTimeOverThresholds(samples, totalTime)
+  // Calculate exact time spent over 38G and 20G using analytical formulas
+  const { timeOver38G, timeOver20G } = calculateExactTimeOverThresholds(peakA, jerk, t1, t2, g)
 
   return {
     ...baseResult,
@@ -229,30 +229,71 @@ function buildSamples(params: {
 }
 
 /**
- * Calculate time spent over 38G and 20G thresholds
+ * Calculate exact time spent over a given G threshold using analytical formulas.
+ *
+ * For a jerk-limited profile with three phases:
+ * - Phase 1 (0 → t₁): linear ramp-up, \(a(t) = j \cdot t\)
+ * - Phase 2 (t₁ → t₁+t₂): constant acceleration (plateau) if present, \(a(t) = A_{\text{peak}}\)
+ * - Phase 3 (t₁+t₂ → 2t₁+t₂): linear ramp-down, \(a(t) = A_{\text{peak}} - j \cdot (t - t_1 - t_2)\)
+ *
+ * The time over threshold is the interval [t_enter, t_exit] where:
+ * - t_enter: when acceleration reaches threshold during ramp-up
+ * - t_exit: when acceleration drops below threshold during ramp-down
+ *
+ * Derivation:
+ * - Phase 1: \(a(t) = j \cdot t = A_{\text{threshold}}\) → \(t_{\text{enter}} = \frac{A_{\text{threshold}}}{j}\)
+ * - Phase 3: \(a(\tau) = A_{\text{peak}} - j \cdot \tau = A_{\text{threshold}}\) → \(\tau_{\text{exit}} = \frac{A_{\text{peak}} - A_{\text{threshold}}}{j}\)
+ * - Convert to absolute time: \(t_{\text{exit}} = t_1 + t_2 + \tau_{\text{exit}}\)
+ * - Time over threshold: \(t_{\text{exit}} - t_{\text{enter}}\)
  */
-function calculateTimeOverThresholds(
-  samples: Array<SamplePoint>,
-  totalTime: number,
+function calculateExactTimeOverThreshold(
+  thresholdG: number,
+  peakA: number, // m/s^2
+  jerk: number, // m/s^3
+  t1: number, // ramp time (s)
+  t2: number, // plateau time (s)
+  g: number, // gravity constant (m/s^2)
+): number {
+  const peakG = peakA / g
+
+  // If peak acceleration is at or below threshold, no time is spent over it
+  if (peakG <= thresholdG + EPSILON) {
+    return 0
+  }
+
+  const thresholdA = thresholdG * g // threshold in m/s^2
+
+  // Find when acceleration reaches threshold during ramp-up (phase 1)
+  // Phase 1: a(t) = j·t, solve for a(t) = thresholdA
+  const t_enter = thresholdA / jerk
+
+  // Find when acceleration drops below threshold during ramp-down (phase 3)
+  // Phase 3: a(τ) = peakA - j·τ, solve for a(τ) = thresholdA
+  // where τ is time since start of phase 3
+  const tau_exit = (peakA - thresholdA) / jerk
+
+  // Convert to absolute time
+  const t_exit = t1 + t2 + tau_exit
+
+  // Total time over threshold
+  return t_exit - t_enter
+}
+
+/**
+ * Calculate exact time spent over 38G and 20G thresholds using analytical formulas
+ * instead of sample-based approximations.
+ */
+function calculateExactTimeOverThresholds(
+  peakA: number,
+  jerk: number,
+  t1: number,
+  t2: number,
+  g: number,
 ): { timeOver38G: number; timeOver20G: number } {
-  if (samples.length < 2) {
-    return { timeOver38G: 0, timeOver20G: 0 }
+  return {
+    timeOver38G: calculateExactTimeOverThreshold(38, peakA, jerk, t1, t2, g),
+    timeOver20G: calculateExactTimeOverThreshold(20, peakA, jerk, t1, t2, g),
   }
-
-  const dt = totalTime / (samples.length - 1)
-  let timeOver38G = 0
-  let timeOver20G = 0
-
-  for (const sample of samples) {
-    if (sample.aG > 38) {
-      timeOver38G += dt
-    }
-    if (sample.aG > 20) {
-      timeOver20G += dt
-    }
-  }
-
-  return { timeOver38G, timeOver20G }
 }
 
 /**
