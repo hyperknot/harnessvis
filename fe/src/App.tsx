@@ -32,7 +32,7 @@ export const AppUI: Component = () => {
   }
 
   return (
-    <div class="min-h-screen bg-slate-50 text-gray-900">
+    <div class="min-h-screen bg-slate-50 text-gray-900 overflow-x-hidden">
       <div class="max-w-5xl mx-auto py-8 px-4 space-y-6">
         <header class="space-y-2">
           <h1 class="md:text-3xl text-xl font-bold tracking-tight">

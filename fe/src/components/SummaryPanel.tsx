@@ -15,8 +15,8 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
 
   return (
     <section class="bg-white rounded-lg shadow-sm border border-gray-200 py-2 px-3">
-      <div class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-around gap-1 sm:gap-3 md:gap-4">
-        <div class="flex flex-col items-center">
+      <div class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-around gap-3 sm:gap-3 md:gap-4">
+        <div class="flex flex-col items-center min-w-0">
           <span class="text-[11px] sm:text-sm text-gray-600 text-center leading-tight">
             Peak G:
           </span>
@@ -31,9 +31,9 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
         </div>
 
         {/* Min theoretical thickness */}
-        <div class="flex flex-col items-center">
-          <span class="text-[11px] sm:text-sm text-gray-600 text-center leading-tight">
-            Min theoretical protector thickness:
+        <div class="flex flex-col items-center min-w-0">
+          <span class="text-[11px] sm:text-sm text-gray-600 text-center leading-tight break-words max-w-full">
+            Min theoretical thickness:
           </span>
           <span class="text-base sm:text-xl md:text-2xl font-bold text-blue-600">
             {props.result.stopDistance ? `${(props.result.stopDistance * 100).toFixed(2)} cm` : '—'}
@@ -41,9 +41,9 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
         </div>
 
         {/* Min foam protector thickness */}
-        <div class="flex flex-col items-center">
-          <span class="text-[11px] sm:text-sm text-gray-600 text-center leading-tight">
-            Min foam protector thickness:
+        <div class="flex flex-col items-center min-w-0">
+          <span class="text-[11px] sm:text-sm text-gray-600 text-center leading-tight break-words max-w-full">
+            Min foam thickness:
           </span>
           <span class="text-base sm:text-xl md:text-2xl font-bold text-emerald-600">
             {props.result.stopDistance ? `${foamThickness().toFixed(2)} cm` : '—'}

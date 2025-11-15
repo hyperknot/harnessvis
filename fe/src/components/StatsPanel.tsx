@@ -21,15 +21,7 @@ export const StatsPanel: Component<StatsPanelProps> = (props) => {
       <div class="grid gap-3 text-sm">
         <div class="flex justify-between">
           <span class="text-gray-600">Max G limit reached?</span>
-          <span
-            class="font-semibold"
-            classList={{
-              'text-red-600': props.result.gLimitReached,
-              'text-emerald-600': !props.result.gLimitReached,
-            }}
-          >
-            {props.result.gLimitReached ? 'Yes' : 'No'}
-          </span>
+          <span class="font-semibold">{props.result.gLimitReached ? 'Yes' : 'No'}</span>
         </div>
 
         <div class="flex justify-between">

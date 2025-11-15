@@ -232,19 +232,19 @@ function buildSamples(params: {
  * Calculate exact time spent over a given G threshold using analytical formulas.
  *
  * For a jerk-limited profile with three phases:
- * - Phase 1 (0 → t₁): linear ramp-up, \(a(t) = j \cdot t\)
- * - Phase 2 (t₁ → t₁+t₂): constant acceleration (plateau) if present, \(a(t) = A_{\text{peak}}\)
- * - Phase 3 (t₁+t₂ → 2t₁+t₂): linear ramp-down, \(a(t) = A_{\text{peak}} - j \cdot (t - t_1 - t_2)\)
+ * - Phase 1 (0 → t₁): linear ramp-up, a(t) = j·t
+ * - Phase 2 (t₁ → t₁+t₂): constant acceleration (plateau) if present, a(t) = A_peak
+ * - Phase 3 (t₁+t₂ → 2t₁+t₂): linear ramp-down, a(t) = A_peak - j·(t - t₁ - t₂)
  *
  * The time over threshold is the interval [t_enter, t_exit] where:
  * - t_enter: when acceleration reaches threshold during ramp-up
  * - t_exit: when acceleration drops below threshold during ramp-down
  *
  * Derivation:
- * - Phase 1: \(a(t) = j \cdot t = A_{\text{threshold}}\) → \(t_{\text{enter}} = \frac{A_{\text{threshold}}}{j}\)
- * - Phase 3: \(a(\tau) = A_{\text{peak}} - j \cdot \tau = A_{\text{threshold}}\) → \(\tau_{\text{exit}} = \frac{A_{\text{peak}} - A_{\text{threshold}}}{j}\)
- * - Convert to absolute time: \(t_{\text{exit}} = t_1 + t_2 + \tau_{\text{exit}}\)
- * - Time over threshold: \(t_{\text{exit}} - t_{\text{enter}}\)
+ * - Phase 1: a(t) = j·t = A_threshold → t_enter = A_threshold / j
+ * - Phase 3: a(τ) = A_peak - j·τ = A_threshold → τ_exit = (A_peak - A_threshold) / j
+ * - Convert to absolute time: t_exit = t₁ + t₂ + τ_exit
+ * - Time over threshold: t_exit - t_enter
  */
 function calculateExactTimeOverThreshold(
   thresholdG: number,

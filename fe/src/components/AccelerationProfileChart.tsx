@@ -47,7 +47,7 @@ export const AccelerationProfileChart: Component<AccelerationProfileChartProps> 
 
     const option: echarts.EChartsOption = {
       animation: false,
-      grid: { left: 50, right: 20, top: 20, bottom: 50 },
+      grid: { left: 0, right: 0, top: 0, bottom: 0, outerBoundsContain: 'all' },
       tooltip: {
         trigger: 'axis',
         axisPointer: { type: 'line' },
@@ -131,5 +131,5 @@ export const AccelerationProfileChart: Component<AccelerationProfileChartProps> 
     }
   })
 
-  return <div ref={chartRef} class="w-full h-80" />
+  return <div ref={chartRef} class="w-full h-80 min-w-0" />
 }
