@@ -71,7 +71,7 @@ export const AccelerationProfileChart: Component<AccelerationProfileChartProps> 
         type: 'value',
         name: 'Acceleration (G)',
         min: 0,
-        max: 45,
+        max: 52,
         axisLabel: { formatter: '{value}' },
         splitLine: { show: true },
       },
