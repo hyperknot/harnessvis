@@ -80,16 +80,16 @@ export const StatsPanel: Component<StatsPanelProps> = (props) => {
         )}
 
         {/* Head Injury Criterion (HIC) */}
-        <div class="py-2 border-t border-gray-200 mt-2 space-y-2">
-          <div class="flex justify-between">
-            <span class="text-gray-600">HIC15:</span>
-            <span class="font-semibold">{props.result.hic15.toFixed(0)}</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-gray-600">HIC36:</span>
-            <span class="font-semibold">{props.result.hic36.toFixed(0)}</span>
-          </div>
-        </div>
+        {/*<div class="py-2 border-t border-gray-200 mt-2 space-y-2">*/}
+        {/*  <div class="flex justify-between">*/}
+        {/*    <span class="text-gray-600">HIC15:</span>*/}
+        {/*    <span class="font-semibold">{props.result.hic15.toFixed(0)}</span>*/}
+        {/*  </div>*/}
+        {/*  <div class="flex justify-between">*/}
+        {/*    <span class="text-gray-600">HIC36:</span>*/}
+        {/*    <span class="font-semibold">{props.result.hic36.toFixed(0)}</span>*/}
+        {/*  </div>*/}
+        {/*</div>*/}
       </div>
     </section>
   )
