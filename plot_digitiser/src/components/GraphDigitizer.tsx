@@ -34,6 +34,18 @@ interface AxisFit {
   origin: PixelPoint // reference point (first calibration point)
 }
 
+interface SaveState {
+  version: number
+  image: string | null
+  xAxisPoints: Array<CalibrationPoint>
+  yAxisPoints: Array<CalibrationPoint>
+  lines: Array<DrawingLine>
+  nextPointId: number
+  nextLineId: number
+  currentLinePoints: Array<PixelPoint>
+  currentLineType: LineType
+}
+
 type Mode = 'idle' | 'calibrate-x' | 'calibrate-y' | 'draw'
 
 // Linear regression helper
@@ -170,11 +182,28 @@ function pixelToReal(
   return { x: realX, y: realY }
 }
 
+// Convert image element to data URL
+function imageToDataUrl(img: HTMLImageElement): string | null {
+  try {
+    const canvas = document.createElement('canvas')
+    canvas.width = img.naturalWidth
+    canvas.height = img.naturalHeight
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+    ctx.drawImage(img, 0, 0)
+    return canvas.toDataURL('image/png')
+  } catch {
+    return null
+  }
+}
+
 export const GraphDigitizer: Component = () => {
   // Image state
   const [imageUrl, setImageUrl] = createSignal<string | null>(null)
   const [imageSize, setImageSize] = createSignal<{ width: number; height: number } | null>(null)
   const [imageLoaded, setImageLoaded] = createSignal(false)
+  const [imageDataUrl, setImageDataUrl] = createSignal<string | null>(null)
+  const [objectUrlToRevoke, setObjectUrlToRevoke] = createSignal<string | null>(null)
 
   // Mode and calibration state
   const [mode, setMode] = createSignal<Mode>('idle')
@@ -194,6 +223,7 @@ export const GraphDigitizer: Component = () => {
   let canvasRef: HTMLCanvasElement | undefined
   let imageRef: HTMLImageElement | undefined
   let containerRef: HTMLDivElement | undefined
+  let loadStateInputRef: HTMLInputElement | undefined
 
   // Computed axis fits
   const xAxisFit = createMemo(() => fitAxis(xAxisPoints(), 'x'))
@@ -243,9 +273,15 @@ export const GraphDigitizer: Component = () => {
   }
 
   const loadImageFile = (file: File) => {
+    // Revoke previous object URL if any
+    const prevUrl = objectUrlToRevoke()
+    if (prevUrl) URL.revokeObjectURL(prevUrl)
+
     const url = URL.createObjectURL(file)
+    setObjectUrlToRevoke(url)
     setImageUrl(url)
     setImageLoaded(false)
+    setImageDataUrl(null)
   }
 
   // Handle clipboard paste
@@ -272,7 +308,7 @@ export const GraphDigitizer: Component = () => {
 
   onCleanup(() => {
     document.removeEventListener('paste', handlePaste)
-    const url = imageUrl()
+    const url = objectUrlToRevoke()
     if (url) URL.revokeObjectURL(url)
   })
 
@@ -281,7 +317,106 @@ export const GraphDigitizer: Component = () => {
     if (imageRef) {
       setImageSize({ width: imageRef.naturalWidth, height: imageRef.naturalHeight })
       setImageLoaded(true)
+
+      // Convert to data URL if not already a data URL
+      const currentUrl = imageUrl()
+      if (currentUrl && !currentUrl.startsWith('data:')) {
+        const dataUrl = imageToDataUrl(imageRef)
+        if (dataUrl) {
+          setImageDataUrl(dataUrl)
+        }
+      } else if (currentUrl?.startsWith('data:')) {
+        setImageDataUrl(currentUrl)
+      }
     }
+  }
+
+  // Save state to JSON file
+  const saveState = () => {
+    const dataUrl = imageDataUrl()
+    if (!dataUrl) {
+      alert('No image data available to save')
+      return
+    }
+
+    const state: SaveState = {
+      version: 1,
+      image: dataUrl,
+      xAxisPoints: xAxisPoints(),
+      yAxisPoints: yAxisPoints(),
+      lines: lines(),
+      nextPointId: nextPointId(),
+      nextLineId: nextLineId(),
+      currentLinePoints: currentLinePoints(),
+      currentLineType: currentLineType(),
+    }
+
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `graph-digitizer-${new Date().toISOString().slice(0, 10)}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  // Load state from JSON file
+  const loadState = (e: Event) => {
+    const input = e.target as HTMLInputElement
+    const file = input.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      try {
+        const state = JSON.parse(event.target?.result as string) as SaveState
+
+        if (state.version !== 1) {
+          alert('Unsupported save file version')
+          return
+        }
+
+        // Revoke previous object URL if any
+        const prevUrl = objectUrlToRevoke()
+        if (prevUrl) URL.revokeObjectURL(prevUrl)
+        setObjectUrlToRevoke(null)
+
+        // Load image from data URL
+        if (state.image) {
+          setImageUrl(state.image)
+          setImageDataUrl(state.image)
+          setImageLoaded(false)
+        }
+
+        // Restore calibration points
+        if (state.xAxisPoints) setXAxisPoints(state.xAxisPoints)
+        if (state.yAxisPoints) setYAxisPoints(state.yAxisPoints)
+
+        // Restore lines
+        if (state.lines) setLines(state.lines)
+
+        // Restore IDs
+        if (state.nextPointId) setNextPointId(state.nextPointId)
+        if (state.nextLineId) setNextLineId(state.nextLineId)
+
+        // Restore current drawing state
+        if (state.currentLinePoints) setCurrentLinePoints(state.currentLinePoints)
+        if (state.currentLineType) setCurrentLineType(state.currentLineType)
+
+        // Reset mode and pending state
+        setMode('idle')
+        setPendingClick(null)
+        setPendingValue('')
+      } catch (err) {
+        alert(`Failed to load state file: ${(err as Error).message}`)
+      }
+    }
+    reader.readAsText(file)
+
+    // Reset input so same file can be loaded again
+    input.value = ''
   }
 
   // Handle canvas click
@@ -522,6 +657,24 @@ export const GraphDigitizer: Component = () => {
               <input type="file" accept="image/*" class="hidden" onChange={handleFileInput} />
             </label>
             <span class="text-gray-500">or paste from clipboard (Ctrl+V)</span>
+            <span class="text-gray-300">|</span>
+            <label class="cursor-pointer bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+              Load State
+              <input
+                ref={loadStateInputRef}
+                type="file"
+                accept=".json,application/json"
+                class="hidden"
+                onChange={loadState}
+              />
+            </label>
+            <button
+              class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={saveState}
+              disabled={!imageDataUrl()}
+            >
+              Save State
+            </button>
           </div>
         </div>
 
