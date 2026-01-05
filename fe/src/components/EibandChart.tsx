@@ -120,13 +120,12 @@ export const EibandChart: Component<EibandChartProps> = (props) => {
     const instance = chart()
     if (!instance) return
 
-    const { peakG, t1, t2 } = props
-    const data = calculateGDurationPairs(peakG, t1, t2)
+    const data = calculateGDurationPairs(props.peakG, props.t1, props.t2)
 
     // Y-axis max: accommodate both reference curves and user profile
     let yMax = 200
-    if (peakG > 150) {
-      yMax = 10 ** Math.ceil(Math.log10(peakG * 1.2))
+    if (props.peakG > 150) {
+      yMax = 10 ** Math.ceil(Math.log10(props.peakG * 1.2))
     }
 
     const option: echarts.EChartsOption = {
