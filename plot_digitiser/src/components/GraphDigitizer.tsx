@@ -123,7 +123,7 @@ function fitAxis(points: Array<CalibrationPoint>, axis: 'x' | 'y'): AxisFit | nu
   }
 }
 
-// Fit line from points based on type
+// Fit line from points based on type (pixel space - used as fallback when not calibrated)
 function fitLine(
   points: Array<PixelPoint>,
   type: LineType,
@@ -182,6 +182,92 @@ function pixelToReal(
   return { x: realX, y: realY }
 }
 
+// Transform real point to pixel coordinates using axis calibrations
+function realToPixel(
+  real: { x: number; y: number },
+  xFit: AxisFit,
+  yFit: AxisFit,
+): PixelPoint | null {
+  // Compute distances along each axis from the log values
+  const logX = Math.log10(real.x)
+  const logY = Math.log10(real.y)
+
+  const xDist = (logX - xFit.intercept) / xFit.slope
+  const yDist = (logY - yFit.intercept) / yFit.slope
+
+  // Solve linear system to find pixel coordinates
+  // xDist = (px - xFit.origin.x) * xFit.dirX + (py - xFit.origin.y) * xFit.dirY
+  // yDist = (px - yFit.origin.x) * yFit.dirX + (py - yFit.origin.y) * yFit.dirY
+  const a = xFit.dirX
+  const b = xFit.dirY
+  const c = yFit.dirX
+  const d = yFit.dirY
+  const e = xDist + xFit.origin.x * a + xFit.origin.y * b
+  const f = yDist + yFit.origin.x * c + yFit.origin.y * d
+
+  const det = a * d - b * c
+  if (Math.abs(det) < 1e-12) return null
+
+  const px = (e * d - b * f) / det
+  const py = (a * f - e * c) / det
+
+  return { x: px, y: py }
+}
+
+// Fit line in real (log-scale) coordinate space
+// Horizontal/vertical constraints are applied in real space, not pixel space
+function fitLineReal(
+  points: Array<PixelPoint>,
+  type: LineType,
+  xFit: AxisFit,
+  yFit: AxisFit,
+): { startReal: { x: number; y: number }; endReal: { x: number; y: number } } | null {
+  if (points.length < 2) return null
+
+  // Convert all points to real coordinates
+  const realPoints: Array<{ x: number; y: number }> = []
+  for (const p of points) {
+    const real = pixelToReal(p, xFit, yFit)
+    if (!real) return null
+    realPoints.push(real)
+  }
+
+  // Work in log space for all operations (geometric mean for averaging)
+  const logXs = realPoints.map((p) => Math.log10(p.x))
+  const logYs = realPoints.map((p) => Math.log10(p.y))
+
+  if (type === 'horizontal') {
+    // Constant Y in real space: average Y (in log space), use min/max X
+    const avgLogY = logYs.reduce((s, y) => s + y, 0) / logYs.length
+    const minLogX = Math.min(...logXs)
+    const maxLogX = Math.max(...logXs)
+    return {
+      startReal: { x: 10 ** minLogX, y: 10 ** avgLogY },
+      endReal: { x: 10 ** maxLogX, y: 10 ** avgLogY },
+    }
+  } else if (type === 'vertical') {
+    // Constant X in real space: average X (in log space), use min/max Y
+    const avgLogX = logXs.reduce((s, x) => s + x, 0) / logXs.length
+    const minLogY = Math.min(...logYs)
+    const maxLogY = Math.max(...logYs)
+    return {
+      startReal: { x: 10 ** avgLogX, y: 10 ** minLogY },
+      endReal: { x: 10 ** avgLogX, y: 10 ** maxLogY },
+    }
+  } else {
+    // Angular: fit line in log-log space: log(y) = m * log(x) + b
+    const { slope, intercept } = linearRegression(logXs, logYs)
+
+    const minLogX = Math.min(...logXs)
+    const maxLogX = Math.max(...logXs)
+
+    return {
+      startReal: { x: 10 ** minLogX, y: 10 ** (slope * minLogX + intercept) },
+      endReal: { x: 10 ** maxLogX, y: 10 ** (slope * maxLogX + intercept) },
+    }
+  }
+}
+
 // Convert image element to data URL
 function imageToDataUrl(img: HTMLImageElement): string | null {
   try {
@@ -234,7 +320,7 @@ export const GraphDigitizer: Component = () => {
 
   const isCalibrated = createMemo(() => xAxisFit() !== null && yAxisFit() !== null)
 
-  // Computed rotation info
+  // Computed rotation info with average
   const rotationInfo = createMemo(() => {
     const xFit = xAxisFit()
     const yFit = yAxisFit()
@@ -517,16 +603,17 @@ export const GraphDigitizer: Component = () => {
 
     const xFit = xAxisFit()
     const yFit = yAxisFit()
-    const fitted = fitLine(points, currentLineType())
-
-    if (!fitted) return
 
     let startReal = null
     let endReal = null
 
     if (xFit && yFit) {
-      startReal = pixelToReal(fitted.start, xFit, yFit)
-      endReal = pixelToReal(fitted.end, xFit, yFit)
+      // Fit line in real coordinate space (horizontal/vertical constraints applied there)
+      const fittedReal = fitLineReal(points, currentLineType(), xFit, yFit)
+      if (fittedReal) {
+        startReal = fittedReal.startReal
+        endReal = fittedReal.endReal
+      }
     }
 
     const newLine: DrawingLine = {
@@ -620,25 +707,32 @@ export const GraphDigitizer: Component = () => {
       ctx.stroke()
     }
 
-    // Draw finalized lines
+    const xFitVal = xAxisFit()
+    const yFitVal = yAxisFit()
+
+    // Draw finalized lines (using real coords transformed back to pixels)
     for (const line of lines()) {
-      const fitted = fitLine(line.clickedPoints, line.type)
-      if (!fitted) continue
+      if (!line.startReal || !line.endReal || !xFitVal || !yFitVal) continue
+
+      const startPixel = realToPixel(line.startReal, xFitVal, yFitVal)
+      const endPixel = realToPixel(line.endReal, xFitVal, yFitVal)
+
+      if (!startPixel || !endPixel) continue
 
       ctx.strokeStyle = '#22c55e'
       ctx.lineWidth = 3
       ctx.beginPath()
-      ctx.moveTo(fitted.start.x, fitted.start.y)
-      ctx.lineTo(fitted.end.x, fitted.end.y)
+      ctx.moveTo(startPixel.x, startPixel.y)
+      ctx.lineTo(endPixel.x, endPixel.y)
       ctx.stroke()
 
       // Draw endpoints
       ctx.fillStyle = '#22c55e'
       ctx.beginPath()
-      ctx.arc(fitted.start.x, fitted.start.y, 6, 0, Math.PI * 2)
+      ctx.arc(startPixel.x, startPixel.y, 6, 0, Math.PI * 2)
       ctx.fill()
       ctx.beginPath()
-      ctx.arc(fitted.end.x, fitted.end.y, 6, 0, Math.PI * 2)
+      ctx.arc(endPixel.x, endPixel.y, 6, 0, Math.PI * 2)
       ctx.fill()
     }
 
@@ -653,14 +747,34 @@ export const GraphDigitizer: Component = () => {
     // Draw current line preview
     const curPoints = currentLinePoints()
     if (curPoints.length >= 2) {
-      const fitted = fitLine(curPoints, currentLineType())
-      if (fitted) {
+      let startPixel: PixelPoint | null = null
+      let endPixel: PixelPoint | null = null
+
+      if (xFitVal && yFitVal) {
+        // Use real-space fitting for accurate preview
+        const fittedReal = fitLineReal(curPoints, currentLineType(), xFitVal, yFitVal)
+        if (fittedReal) {
+          startPixel = realToPixel(fittedReal.startReal, xFitVal, yFitVal)
+          endPixel = realToPixel(fittedReal.endReal, xFitVal, yFitVal)
+        }
+      }
+
+      // Fallback to pixel-space preview if not calibrated
+      if (!startPixel || !endPixel) {
+        const fitted = fitLine(curPoints, currentLineType())
+        if (fitted) {
+          startPixel = fitted.start
+          endPixel = fitted.end
+        }
+      }
+
+      if (startPixel && endPixel) {
         ctx.strokeStyle = '#f59e0b'
         ctx.lineWidth = 2
         ctx.setLineDash([5, 5])
         ctx.beginPath()
-        ctx.moveTo(fitted.start.x, fitted.start.y)
-        ctx.lineTo(fitted.end.x, fitted.end.y)
+        ctx.moveTo(startPixel.x, startPixel.y)
+        ctx.lineTo(endPixel.x, endPixel.y)
         ctx.stroke()
         ctx.setLineDash([])
       }
@@ -796,6 +910,11 @@ export const GraphDigitizer: Component = () => {
                   </span>
                 )}
               </p>
+              <Show when={rotationInfo()}>
+                <p class="font-medium text-indigo-600">
+                  Average rotation: {rotationInfo()!.avgRotation.toFixed(2)}°
+                </p>
+              </Show>
             </div>
           </div>
 
@@ -866,7 +985,8 @@ export const GraphDigitizer: Component = () => {
                 </button>
               </div>
               <p class="text-sm text-gray-500">
-                Click 2+ points along the line segment. The tool will fit the best line.
+                Click 2+ points along the line segment. Horizontal/vertical constraints are applied
+                in real coordinate space.
               </p>
             </div>
           </Show>
