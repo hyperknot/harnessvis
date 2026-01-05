@@ -1,6 +1,7 @@
 import type { Component } from 'solid-js'
 import { createMemo, createSignal } from 'solid-js'
 import { AccelerationProfileChart } from './components/AccelerationProfileChart'
+import { EibandChart } from './components/EibandChart'
 import { InputPanel } from './components/InputPanel'
 import { ModeSelector } from './components/ModeSelector'
 import { StatsPanel } from './components/StatsPanel'
@@ -110,6 +111,17 @@ export const AppUI: Component = () => {
               <p class="text-xs text-gray-500">{getProfileShapeDescription()}</p>
             </div>
             <AccelerationProfileChart samples={result().samples} />
+          </section>
+
+          {/* Eiband chart */}
+          <section class="bg-white rounded-xl shadow-sm border border-gray-200 py-2 px-3 space-y-3">
+            <div>
+              <h2 class="text-lg font-semibold">Eiband tolerance chart</h2>
+              <p class="text-xs text-gray-500">
+                Time spent at or above each G level (log-log scale)
+              </p>
+            </div>
+            <EibandChart peakG={result().peakG} t1={result().t1} t2={result().t2} />
           </section>
 
           {/* Full-width summary panel */}
