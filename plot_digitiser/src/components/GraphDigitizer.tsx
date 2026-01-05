@@ -79,10 +79,12 @@ function linearRegression(
 
 // Fit axis from calibration points
 function fitAxis(points: Array<CalibrationPoint>, axis: 'x' | 'y'): AxisFit | null {
-  if (points.length < 2) return null
+  // Filter out points that haven't been assigned a positive value yet
+  const validPoints = points.filter((p) => p.value > 0)
+  if (validPoints.length < 2) return null
 
   // Sort points by their pixel coordinate along the axis
-  const sorted = [...points].sort((a, b) => (axis === 'x' ? a.x - b.x : b.y - a.y))
+  const sorted = [...validPoints].sort((a, b) => (axis === 'x' ? a.x - b.x : b.y - a.y))
 
   // Calculate direction vector from first to last point
   const first = sorted[0]
@@ -283,6 +285,28 @@ function imageToDataUrl(img: HTMLImageElement): string | null {
   }
 }
 
+// Calculate error (perpendicular distance in pixels) for a calibration point
+function calculatePointError(point: PixelPoint, fit: AxisFit | null): number {
+  if (!fit) return 0
+
+  // Vector from origin to point
+  const dx = point.x - fit.origin.x
+  const dy = point.y - fit.origin.y
+
+  // Project onto direction (dot product)
+  const dot = dx * fit.dirX + dy * fit.dirY
+
+  // Closest point on the axis line
+  const closestX = fit.origin.x + dot * fit.dirX
+  const closestY = fit.origin.y + dot * fit.dirY
+
+  // Perpendicular distance
+  const distX = point.x - closestX
+  const distY = point.y - closestY
+
+  return Math.sqrt(distX * distX + distY * distY)
+}
+
 export const GraphDigitizer: Component = () => {
   // Image state
   const [imageUrl, setImageUrl] = createSignal<string | null>(null)
@@ -295,9 +319,11 @@ export const GraphDigitizer: Component = () => {
   const [mode, setMode] = createSignal<Mode>('idle')
   const [xAxisPoints, setXAxisPoints] = createSignal<Array<CalibrationPoint>>([])
   const [yAxisPoints, setYAxisPoints] = createSignal<Array<CalibrationPoint>>([])
-  const [pendingValue, setPendingValue] = createSignal<string>('')
-  const [pendingClick, setPendingClick] = createSignal<PixelPoint | null>(null)
+  const [activePointId, setActivePointId] = createSignal<number | null>(null)
   const [nextPointId, setNextPointId] = createSignal(1)
+
+  // Store raw input strings to prevent UI jumping while typing
+  const [inputStrings, setInputStrings] = createSignal<Map<number, string>>(new Map())
 
   // Line drawing state
   const [lines, setLines] = createSignal<Array<DrawingLine>>([])
@@ -523,8 +549,8 @@ export const GraphDigitizer: Component = () => {
 
         // Reset mode and pending state
         setMode('idle')
-        setPendingClick(null)
-        setPendingValue('')
+        setActivePointId(null)
+        setInputStrings(new Map())
       } catch (err) {
         alert(`Failed to load state file: ${(err as Error).message}`)
       }
@@ -554,43 +580,83 @@ export const GraphDigitizer: Component = () => {
     const x = (e.clientX - rect.left) * scaleX
     const y = (e.clientY - rect.top) * scaleY
 
-    const point: PixelPoint = { x, y }
-
     if (mode() === 'calibrate-x' || mode() === 'calibrate-y') {
-      setPendingClick(point)
-      setPendingValue('')
+      // Add point immediately with placeholder value
+      const id = nextPointId()
+      const newPoint: CalibrationPoint = {
+        x,
+        y,
+        value: 0, // 0 indicates "not yet set"
+        id,
+      }
+      setNextPointId((n) => n + 1)
+
+      if (mode() === 'calibrate-x') {
+        setXAxisPoints((prev) => [...prev, newPoint])
+      } else {
+        setYAxisPoints((prev) => [...prev, newPoint])
+      }
+
+      // Auto-focus the new point's input
+      setActivePointId(id)
+      setTimeout(() => {
+        document.getElementById(`cal-input-${id}`)?.focus()
+      }, 0)
     } else if (mode() === 'draw') {
-      setCurrentLinePoints((prev) => [...prev, point])
+      setCurrentLinePoints((prev) => [...prev, { x, y }])
     }
   }
 
-  // Add calibration point
-  const addCalibrationPoint = () => {
-    const click = pendingClick()
-    const valueStr = pendingValue()
-    if (!click || !valueStr) return
+  // Commit value from input string to state
+  const commitCalibrationValue = (axis: 'x' | 'y', id: number, valueStr: string) => {
+    const val = Number.parseFloat(valueStr)
+    const num = Number.isNaN(val) ? 0 : val
 
-    const value = Number.parseFloat(valueStr)
-    if (Number.isNaN(value) || value <= 0) {
-      alert('Value must be a positive number')
-      return
+    // Clear the temporary input string
+    setInputStrings((prev) => {
+      const next = new Map(prev)
+      next.delete(id)
+      return next
+    })
+
+    const updateFn = axis === 'x' ? setXAxisPoints : setYAxisPoints
+    updateFn((prev) => prev.map((p) => (p.id === id ? { ...p, value: num } : p)))
+  }
+
+  // Handle input change (store raw string)
+  const handleCalibrationInput = (id: number, value: string) => {
+    setInputStrings((prev) => {
+      const next = new Map(prev)
+      next.set(id, value)
+      return next
+    })
+  }
+
+  // Handle keyboard navigation for calibration inputs
+  const handleCalibrationKeyDown = (
+    e: KeyboardEvent,
+    index: number,
+    axis: 'x' | 'y',
+    id: number,
+  ) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      const points = axis === 'x' ? xAxisPoints() : yAxisPoints()
+      const currentInput = e.currentTarget as HTMLInputElement
+      const value = currentInput.value
+
+      // Commit current value
+      commitCalibrationValue(axis, id, value)
+
+      // Focus next input
+      if (index < points.length - 1) {
+        const nextPoint = points[index + 1]
+        setActivePointId(nextPoint.id)
+        setTimeout(() => {
+          document.getElementById(`cal-input-${nextPoint.id}`)?.focus()
+        }, 0)
+      }
     }
-
-    const point: CalibrationPoint = {
-      ...click,
-      value,
-      id: nextPointId(),
-    }
-    setNextPointId((n) => n + 1)
-
-    if (mode() === 'calibrate-x') {
-      setXAxisPoints((prev) => [...prev, point])
-    } else if (mode() === 'calibrate-y') {
-      setYAxisPoints((prev) => [...prev, point])
-    }
-
-    setPendingClick(null)
-    setPendingValue('')
   }
 
   // Finalize current line
@@ -636,11 +702,21 @@ export const GraphDigitizer: Component = () => {
 
   // Delete calibration point
   const deleteCalibrationPoint = (axis: 'x' | 'y', id: number) => {
-    if (axis === 'x') {
-      setXAxisPoints((prev) => prev.filter((p) => p.id !== id))
-    } else {
-      setYAxisPoints((prev) => prev.filter((p) => p.id !== id))
-    }
+    const updateFn = axis === 'x' ? setXAxisPoints : setYAxisPoints
+    updateFn((prev) => {
+      const filtered = prev.filter((p) => p.id !== id)
+      // If we deleted the active point, clear active point
+      if (activePointId() === id) {
+        setActivePointId(null)
+      }
+      return filtered
+    })
+    // Also remove from input strings map
+    setInputStrings((prev) => {
+      const next = new Map(prev)
+      next.delete(id)
+      return next
+    })
   }
 
   // Clear all
@@ -649,7 +725,8 @@ export const GraphDigitizer: Component = () => {
     setYAxisPoints([])
     setLines([])
     setCurrentLinePoints([])
-    setPendingClick(null)
+    setActivePointId(null)
+    setInputStrings(new Map())
     setMode('idle')
   }
 
@@ -669,6 +746,8 @@ export const GraphDigitizer: Component = () => {
     // Draw image
     ctx.drawImage(imageRef, 0, 0)
 
+    const activeId = activePointId()
+
     // Draw X axis calibration points
     ctx.fillStyle = '#ef4444'
     ctx.strokeStyle = '#fff'
@@ -678,9 +757,12 @@ export const GraphDigitizer: Component = () => {
       ctx.arc(p.x, p.y, 8, 0, Math.PI * 2)
       ctx.fill()
       ctx.stroke()
+
+      // Draw value if valid, otherwise draw placeholder or index
       ctx.fillStyle = '#fff'
       ctx.font = '12px sans-serif'
-      ctx.fillText(p.value.toString(), p.x + 12, p.y + 4)
+      const label = p.value > 0 ? p.value.toString() : '#'
+      ctx.fillText(label, p.x + 12, p.y + 4)
       ctx.fillStyle = '#ef4444'
     }
 
@@ -693,18 +775,22 @@ export const GraphDigitizer: Component = () => {
       ctx.stroke()
       ctx.fillStyle = '#fff'
       ctx.font = '12px sans-serif'
-      ctx.fillText(p.value.toString(), p.x + 12, p.y + 4)
+      const label = p.value > 0 ? p.value.toString() : '#'
+      ctx.fillText(label, p.x + 12, p.y + 4)
       ctx.fillStyle = '#3b82f6'
     }
 
-    // Draw pending click
-    const pending = pendingClick()
-    if (pending) {
-      ctx.fillStyle = mode() === 'calibrate-x' ? '#fca5a5' : '#93c5fd'
-      ctx.beginPath()
-      ctx.arc(pending.x, pending.y, 10, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.stroke()
+    // Draw active point highlight (on top of everything else so far)
+    if (activeId !== null) {
+      const allPoints = [...xAxisPoints(), ...yAxisPoints()]
+      const activePoint = allPoints.find((p) => p.id === activeId)
+      if (activePoint) {
+        ctx.lineWidth = 4
+        ctx.strokeStyle = '#f59e0b' // Amber-500
+        ctx.beginPath()
+        ctx.arc(activePoint.x, activePoint.y, 14, 0, Math.PI * 2)
+        ctx.stroke()
+      }
     }
 
     const xFitVal = xAxisFit()
@@ -788,7 +874,7 @@ export const GraphDigitizer: Component = () => {
     yAxisPoints()
     lines()
     currentLinePoints()
-    pendingClick()
+    activePointId()
     renderCanvas()
   })
 
@@ -858,7 +944,11 @@ export const GraphDigitizer: Component = () => {
                   'bg-red-100 border-red-400': mode() === 'calibrate-x',
                   'hover:bg-gray-100': mode() !== 'calibrate-x',
                 }}
-                onClick={() => setMode(mode() === 'calibrate-x' ? 'idle' : 'calibrate-x')}
+                onClick={() => {
+                  const nextMode = mode() === 'calibrate-x' ? 'idle' : 'calibrate-x'
+                  setMode(nextMode)
+                  setActivePointId(null)
+                }}
               >
                 Calibrate X-Axis
               </button>
@@ -868,7 +958,11 @@ export const GraphDigitizer: Component = () => {
                   'bg-blue-100 border-blue-400': mode() === 'calibrate-y',
                   'hover:bg-gray-100': mode() !== 'calibrate-y',
                 }}
-                onClick={() => setMode(mode() === 'calibrate-y' ? 'idle' : 'calibrate-y')}
+                onClick={() => {
+                  const nextMode = mode() === 'calibrate-y' ? 'idle' : 'calibrate-y'
+                  setMode(nextMode)
+                  setActivePointId(null)
+                }}
               >
                 Calibrate Y-Axis
               </button>
@@ -879,7 +973,12 @@ export const GraphDigitizer: Component = () => {
                   'hover:bg-gray-100': mode() !== 'draw',
                   'opacity-50 cursor-not-allowed': !isCalibrated(),
                 }}
-                onClick={() => isCalibrated() && setMode(mode() === 'draw' ? 'idle' : 'draw')}
+                onClick={() => {
+                  const isDraw = mode() === 'draw'
+                  if (isCalibrated()) {
+                    setMode(isDraw ? 'idle' : 'draw')
+                  }
+                }}
                 disabled={!isCalibrated()}
               >
                 Draw Lines
@@ -917,38 +1016,6 @@ export const GraphDigitizer: Component = () => {
               </Show>
             </div>
           </div>
-
-          {/* Pending calibration point input */}
-          <Show when={pendingClick() && (mode() === 'calibrate-x' || mode() === 'calibrate-y')}>
-            <div class="bg-white rounded-lg shadow-sm border p-4">
-              <div class="flex gap-3 items-center">
-                <span class="font-medium">
-                  Enter {mode() === 'calibrate-x' ? 'X' : 'Y'} value for clicked point:
-                </span>
-                <input
-                  type="number"
-                  step="any"
-                  class="border rounded px-3 py-1.5 w-32"
-                  placeholder="e.g., 0.01"
-                  value={pendingValue()}
-                  onInput={(e) => setPendingValue(e.currentTarget.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addCalibrationPoint()}
-                />
-                <button
-                  class="bg-green-600 text-white px-4 py-1.5 rounded hover:bg-green-700"
-                  onClick={addCalibrationPoint}
-                >
-                  Add
-                </button>
-                <button
-                  class="bg-gray-300 px-4 py-1.5 rounded hover:bg-gray-400"
-                  onClick={() => setPendingClick(null)}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </Show>
 
           {/* Drawing controls */}
           <Show when={mode() === 'draw'}>
@@ -1002,49 +1069,112 @@ export const GraphDigitizer: Component = () => {
 
           {/* Calibration points lists */}
           <div class="grid md:grid-cols-2 gap-4">
-            <div class="bg-white rounded-lg shadow-sm border p-4">
-              <h3 class="font-semibold mb-2 text-red-600">X-Axis Points</h3>
+            <div
+              class="bg-white rounded-lg shadow-sm border p-4 transition-colors"
+              classList={{ 'ring-2 ring-red-300': mode() === 'calibrate-x' }}
+            >
+              <div class="flex justify-between items-center mb-2">
+                <h3 class="font-semibold text-red-600">X-Axis Points</h3>
+                <Show when={mode() === 'calibrate-x'}>
+                  <span class="text-xs text-red-500 font-medium">Click graph to add points</span>
+                </Show>
+              </div>
               <Show when={xAxisPoints().length === 0}>
                 <p class="text-gray-500 text-sm">No points yet</p>
               </Show>
-              <ul class="space-y-1 text-sm">
+              <ul class="space-y-2">
                 <For each={xAxisPoints()}>
-                  {(p) => (
-                    <li class="flex justify-between items-center">
-                      <span>
-                        ({p.x.toFixed(0)}, {p.y.toFixed(0)}) → {p.value}
-                      </span>
-                      <button
-                        class="text-red-500 hover:text-red-700 text-xs"
-                        onClick={() => deleteCalibrationPoint('x', p.id)}
-                      >
-                        ✕
-                      </button>
-                    </li>
-                  )}
+                  {(p, index) => {
+                    const rawInput = inputStrings().get(p.id)
+                    const displayValue = rawInput !== undefined ? rawInput : (p.value === 0 ? '' : String(p.value))
+                    const error = calculatePointError(p, xAxisFit())
+                    return (
+                      <li class="flex items-center gap-2 text-sm py-1 border-b last:border-0">
+                        <span class="w-6 text-gray-400 text-xs">#{index() + 1}</span>
+                        <span class="font-mono text-gray-500 text-xs w-20">
+                          ({p.x.toFixed(0)}, {p.y.toFixed(0)})
+                        </span>
+                        <input
+                          id={`cal-input-${p.id}`}
+                          type="text"
+                          class="border rounded px-2 py-1 w-32 text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none"
+                          placeholder="Value"
+                          value={displayValue}
+                          onInput={(e) => handleCalibrationInput(p.id, e.currentTarget.value)}
+                          onFocus={() => setActivePointId(p.id)}
+                          onBlur={(e) => commitCalibrationValue('x', p.id, e.currentTarget.value)}
+                          onKeyDown={(e) => handleCalibrationKeyDown(e, index(), 'x', p.id)}
+                        />
+                        <Show when={p.value > 0 && xAxisFit()}>
+                          <span class="text-xs text-gray-400 w-12 text-right" title="Error in pixels">
+                            ±{error.toFixed(1)}px
+                          </span>
+                        </Show>
+                        <button
+                          class="text-red-400 hover:text-red-600 text-sm p-1 ml-auto"
+                          onClick={() => deleteCalibrationPoint('x', p.id)}
+                          title="Remove point"
+                        >
+                          ✕
+                        </button>
+                      </li>
+                    )
+                  }}
                 </For>
               </ul>
             </div>
-            <div class="bg-white rounded-lg shadow-sm border p-4">
-              <h3 class="font-semibold mb-2 text-blue-600">Y-Axis Points</h3>
+
+            <div
+              class="bg-white rounded-lg shadow-sm border p-4 transition-colors"
+              classList={{ 'ring-2 ring-blue-300': mode() === 'calibrate-y' }}
+            >
+              <div class="flex justify-between items-center mb-2">
+                <h3 class="font-semibold text-blue-600">Y-Axis Points</h3>
+                <Show when={mode() === 'calibrate-y'}>
+                  <span class="text-xs text-blue-500 font-medium">Click graph to add points</span>
+                </Show>
+              </div>
               <Show when={yAxisPoints().length === 0}>
                 <p class="text-gray-500 text-sm">No points yet</p>
               </Show>
-              <ul class="space-y-1 text-sm">
+              <ul class="space-y-2">
                 <For each={yAxisPoints()}>
-                  {(p) => (
-                    <li class="flex justify-between items-center">
-                      <span>
-                        ({p.x.toFixed(0)}, {p.y.toFixed(0)}) → {p.value}
-                      </span>
-                      <button
-                        class="text-red-500 hover:text-red-700 text-xs"
-                        onClick={() => deleteCalibrationPoint('y', p.id)}
-                      >
-                        ✕
-                      </button>
-                    </li>
-                  )}
+                  {(p, index) => {
+                    const rawInput = inputStrings().get(p.id)
+                    const displayValue = rawInput !== undefined ? rawInput : (p.value === 0 ? '' : String(p.value))
+                    const error = calculatePointError(p, yAxisFit())
+                    return (
+                      <li class="flex items-center gap-2 text-sm py-1 border-b last:border-0">
+                        <span class="w-6 text-gray-400 text-xs">#{index() + 1}</span>
+                        <span class="font-mono text-gray-500 text-xs w-20">
+                          ({p.x.toFixed(0)}, {p.y.toFixed(0)})
+                        </span>
+                        <input
+                          id={`cal-input-${p.id}`}
+                          type="text"
+                          class="border rounded px-2 py-1 w-32 text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none"
+                          placeholder="Value"
+                          value={displayValue}
+                          onInput={(e) => handleCalibrationInput(p.id, e.currentTarget.value)}
+                          onFocus={() => setActivePointId(p.id)}
+                          onBlur={(e) => commitCalibrationValue('y', p.id, e.currentTarget.value)}
+                          onKeyDown={(e) => handleCalibrationKeyDown(e, index(), 'y', p.id)}
+                        />
+                        <Show when={p.value > 0 && yAxisFit()}>
+                          <span class="text-xs text-gray-400 w-12 text-right" title="Error in pixels">
+                            ±{error.toFixed(1)}px
+                          </span>
+                        </Show>
+                        <button
+                          class="text-red-400 hover:text-red-600 text-sm p-1 ml-auto"
+                          onClick={() => deleteCalibrationPoint('y', p.id)}
+                          title="Remove point"
+                        >
+                          ✕
+                        </button>
+                      </li>
+                    )
+                  }}
                 </For>
               </ul>
             </div>
