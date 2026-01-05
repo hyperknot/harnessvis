@@ -225,6 +225,9 @@ export const GraphDigitizer: Component = () => {
   let containerRef: HTMLDivElement | undefined
   let loadStateInputRef: HTMLInputElement | undefined
 
+  // Drag and drop state
+  const [isDragOver, setIsDragOver] = createSignal(false)
+
   // Computed axis fits
   const xAxisFit = createMemo(() => fitAxis(xAxisPoints(), 'x'))
   const yAxisFit = createMemo(() => fitAxis(yAxisPoints(), 'y'))
@@ -301,6 +304,37 @@ export const GraphDigitizer: Component = () => {
     }
   }
 
+  // Handle drag over
+  const handleDragOver = (e: DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(true)
+  }
+
+  // Handle drag leave
+  const handleDragLeave = (e: DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+  }
+
+  // Handle drop
+  const handleDrop = (e: DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+
+    const files = e.dataTransfer?.files
+    if (!files || files.length === 0) return
+
+    const file = files[0]
+
+    if (file.type.startsWith('image/')) {
+      loadImageFile(file)
+    } else if (file.name.endsWith('.json') || file.type === 'application/json') {
+      loadStateFromFile(file)
+    } else {
+      alert('Unsupported file type. Please drop an image or JSON file.')
+    }
+  }
+
   // Set up paste listener
   onMount(() => {
     document.addEventListener('paste', handlePaste)
@@ -362,12 +396,8 @@ export const GraphDigitizer: Component = () => {
     URL.revokeObjectURL(url)
   }
 
-  // Load state from JSON file
-  const loadState = (e: Event) => {
-    const input = e.target as HTMLInputElement
-    const file = input.files?.[0]
-    if (!file) return
-
+  // Load state from dropped file
+  const loadStateFromFile = (file: File) => {
     const reader = new FileReader()
     reader.onload = (event) => {
       try {
@@ -414,6 +444,15 @@ export const GraphDigitizer: Component = () => {
       }
     }
     reader.readAsText(file)
+  }
+
+  // Load state from input file
+  const loadState = (e: Event) => {
+    const input = e.target as HTMLInputElement
+    const file = input.files?.[0]
+    if (!file) return
+
+    loadStateFromFile(file)
 
     // Reset input so same file can be loaded again
     input.value = ''
@@ -640,12 +679,19 @@ export const GraphDigitizer: Component = () => {
   })
 
   return (
-    <div class="min-h-screen bg-slate-50 text-gray-900">
+    <div
+      class="min-h-screen bg-slate-50 text-gray-900"
+      classList={{ 'bg-blue-50 border-2 border-dashed border-blue-300': isDragOver() }}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <div class="max-w-7xl mx-auto py-6 px-4 space-y-4">
         <header class="space-y-2">
           <h1 class="text-2xl font-bold">Graph Digitizer (Log-Log)</h1>
           <p class="text-gray-600">
-            Digitize scanned log-log graphs. Paste image from clipboard or load a file.
+            Digitize scanned log-log graphs. Paste image from clipboard, load a file, or drag and
+            drop an image or JSON state file onto the interface.
           </p>
         </header>
 
@@ -656,7 +702,7 @@ export const GraphDigitizer: Component = () => {
               Load Image
               <input type="file" accept="image/*" class="hidden" onChange={handleFileInput} />
             </label>
-            <span class="text-gray-500">or paste from clipboard (Ctrl+V)</span>
+            <span class="text-gray-500">or paste from clipboard (Ctrl+V) or drag and drop</span>
             <span class="text-gray-300">|</span>
             <label class="cursor-pointer bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
               Load State
@@ -940,7 +986,10 @@ export const GraphDigitizer: Component = () => {
         <Show when={!imageUrl()}>
           <div class="bg-white rounded-lg shadow-sm border p-8 text-center text-gray-500">
             <p class="text-lg">Load an image to begin</p>
-            <p class="text-sm mt-2">Paste from clipboard or use the Load Image button above</p>
+            <p class="text-sm mt-2">
+              Paste from clipboard, use the Load Image button, or drag and drop an image or JSON
+              file here
+            </p>
           </div>
         </Show>
       </div>
