@@ -28,7 +28,8 @@
   },
   "include": [
     //
-    "fe/src/**/*"
+    "fe/src/**/*",
+    "plot_digitiser/src/**/*"
   ],
   "exclude": ["**/_not_used"]
 }

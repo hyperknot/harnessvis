@@ -113,8 +113,6 @@ export const AppUI: Component = () => {
             <AccelerationProfileChart samples={result().samples} />
           </section>
 
-
-
           {/* Full-width summary panel */}
           <SummaryPanel
             mode={mode()}
@@ -142,7 +140,7 @@ export const AppUI: Component = () => {
             <StatsPanel result={result()} />
           </div>
 
-                  {/* Eiband chart */}
+          {/* Eiband chart */}
           <section class="bg-white rounded-xl shadow-sm border border-gray-200 py-2 px-3 space-y-3">
             <div>
               <h2 class="text-lg font-semibold">Eiband tolerance chart</h2>

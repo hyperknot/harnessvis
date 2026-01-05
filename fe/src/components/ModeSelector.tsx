@@ -13,7 +13,6 @@ export const ModeSelector: Component<ModeSelectorProps> = (props) => {
         <span class="text-sm font-medium text-gray-700 shrink-0">Calculate:</span>
         <div class="flex rounded-lg bg-gray-100 p-1 w-full sm:w-auto">
           <button
-            type="button"
             onClick={() => props.onModeChange('thickness')}
             class={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-all duration-150 ${
               props.mode === 'thickness'
@@ -24,7 +23,6 @@ export const ModeSelector: Component<ModeSelectorProps> = (props) => {
             Min Thickness
           </button>
           <button
-            type="button"
             onClick={() => props.onModeChange('speed')}
             class={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-all duration-150 ${
               props.mode === 'speed'
