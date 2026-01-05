@@ -2,23 +2,57 @@ import type { Component } from 'solid-js'
 import { createMemo, createSignal } from 'solid-js'
 import { AccelerationProfileChart } from './components/AccelerationProfileChart'
 import { InputPanel } from './components/InputPanel'
+import { ModeSelector } from './components/ModeSelector'
 import { StatsPanel } from './components/StatsPanel'
 import { SummaryPanel } from './components/SummaryPanel'
-import { computeProfile } from './lib/physics'
+import { calculateTheoreticalThickness, computeMaxImpactSpeed, computeProfile } from './lib/physics'
+import type { CalculationMode } from './types/physics'
 
 export const AppUI: Component = () => {
+  // Mode selection
+  const [mode, setMode] = createSignal<CalculationMode>('thickness')
+
+  // Mode 1 (thickness) inputs
   const [impactSpeed, setImpactSpeed] = createSignal(5.7) // m/s
+
+  // Mode 2 (speed) inputs
+  const [foamThickness, setFoamThickness] = createSignal(15) // cm
+
+  // Common inputs
   const [jerkG, setJerkG] = createSignal(1300) // G/s
   const [maxG, setMaxG] = createSignal(42) // G
   const [compressionFactor, setCompressionFactor] = createSignal(75) // %
 
-  const result = createMemo(() =>
-    computeProfile({
-      v0: impactSpeed(),
+  // Computed result based on mode
+  const result = createMemo(() => {
+    if (mode() === 'thickness') {
+      // Mode 1: Calculate thickness from impact speed
+      return computeProfile({
+        v0: impactSpeed(),
+        jerkG: jerkG(),
+        maxG: maxG(),
+      })
+    }
+    // Mode 2: Calculate max impact speed from thickness
+    const theoreticalThickness = calculateTheoreticalThickness(foamThickness(), compressionFactor())
+    const inverseResult = computeMaxImpactSpeed({
+      targetStopDistance: theoreticalThickness / 100, // convert cm to m
       jerkG: jerkG(),
       maxG: maxG(),
-    }),
-  )
+    })
+    return inverseResult.result
+  })
+
+  // Max impact speed (only relevant for mode 2)
+  const maxImpactSpeedResult = createMemo(() => {
+    if (mode() !== 'speed') return
+    const theoreticalThickness = calculateTheoreticalThickness(foamThickness(), compressionFactor())
+    return computeMaxImpactSpeed({
+      targetStopDistance: theoreticalThickness / 100,
+      jerkG: jerkG(),
+      maxG: maxG(),
+    }).maxImpactSpeed
+  })
 
   const getProfileShapeDescription = () => {
     const type = result().profileType
@@ -64,6 +98,9 @@ export const AppUI: Component = () => {
           </p>
         </header>
 
+        {/* Mode selector */}
+        <ModeSelector mode={mode()} onModeChange={setMode} />
+
         {/* Content layout */}
         <div class="space-y-3">
           {/* Full-width chart on top */}
@@ -75,16 +112,24 @@ export const AppUI: Component = () => {
             <AccelerationProfileChart samples={result().samples} />
           </section>
 
-          {/* Full-width thickness panel */}
-          <SummaryPanel result={result()} compressionFactor={compressionFactor()} />
+          {/* Full-width summary panel */}
+          <SummaryPanel
+            mode={mode()}
+            result={result()}
+            compressionFactor={compressionFactor()}
+            maxImpactSpeed={maxImpactSpeedResult()}
+          />
 
           <div class="grid gap-3 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start">
             <InputPanel
+              mode={mode()}
               impactSpeed={impactSpeed()}
+              foamThickness={foamThickness()}
               jerkG={jerkG()}
               maxG={maxG()}
               compressionFactor={compressionFactor()}
               onImpactSpeedChange={setImpactSpeed}
+              onFoamThicknessChange={setFoamThickness}
               onJerkGChange={setJerkG}
               onMaxGChange={setMaxG}
               onCompressionFactorChange={setCompressionFactor}

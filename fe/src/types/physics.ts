@@ -2,6 +2,8 @@ export const G_CONST = 9.81
 
 export type ProfileType = 'triangular' | 'trapezoidal'
 
+export type CalculationMode = 'thickness' | 'speed'
+
 export interface PhysicsInput {
   v0: number // impact speed (m/s)
   jerkG: number // jerk limit (G/s)
@@ -40,4 +42,9 @@ export interface PhysicsResult {
   hic36: number // Head Injury Criterion (36 ms window)
 
   samples: Array<SamplePoint>
+}
+
+export interface InverseResult {
+  maxImpactSpeed: number
+  result: PhysicsResult
 }

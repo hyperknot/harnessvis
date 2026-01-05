@@ -1,5 +1,6 @@
 import {
   G_CONST,
+  type InverseResult,
   type PhysicsInput,
   type PhysicsResult,
   type ProfileType,
@@ -167,6 +168,66 @@ export function computeProfile(input: PhysicsInput): PhysicsResult {
     hic36,
 
     samples,
+  }
+}
+
+/**
+ * Compute the maximum impact speed that can be safely absorbed
+ * given a target stop distance (theoretical thickness), jerk limit, and max G.
+ *
+ * Uses binary search to find the v0 that produces the target stopDistance.
+ */
+export function computeMaxImpactSpeed(params: {
+  targetStopDistance: number // meters
+  jerkG: number
+  maxG: number
+}): InverseResult {
+  const { targetStopDistance, jerkG, maxG } = params
+
+  // Edge cases
+  if (targetStopDistance <= 0 || jerkG <= 0 || maxG <= 0) {
+    return {
+      maxImpactSpeed: 0,
+      result: computeProfile({ v0: 0.001, jerkG, maxG }),
+    }
+  }
+
+  // Binary search for v0
+  let low = 0.001
+  let high = 100 // m/s - generous upper bound
+
+  // Expand upper bound if needed
+  let result = computeProfile({ v0: high, jerkG, maxG })
+  while (result.ok && result.stopDistance < targetStopDistance && high < 1000) {
+    high *= 2
+    result = computeProfile({ v0: high, jerkG, maxG })
+  }
+
+  // Binary search with sufficient iterations for precision
+  for (let i = 0; i < 100; i++) {
+    const mid = (low + high) / 2
+    result = computeProfile({ v0: mid, jerkG, maxG })
+
+    if (!result.ok) {
+      high = mid
+      continue
+    }
+
+    if (Math.abs(result.stopDistance - targetStopDistance) < 1e-9) {
+      return { maxImpactSpeed: mid, result }
+    }
+
+    if (result.stopDistance < targetStopDistance) {
+      low = mid
+    } else {
+      high = mid
+    }
+  }
+
+  const finalV0 = (low + high) / 2
+  return {
+    maxImpactSpeed: finalV0,
+    result: computeProfile({ v0: finalV0, jerkG, maxG }),
   }
 }
 
@@ -380,4 +441,19 @@ export function calculateFoamThickness(
 ): number {
   if (compressionFactor <= 0) return 0
   return minTheoreticalThickness / (compressionFactor / 100)
+}
+
+/**
+ * Calculate theoretical compression distance from foam thickness.
+ * Inverse of calculateFoamThickness.
+ *
+ * @param foamThickness - Uncompressed foam thickness (cm)
+ * @param compressionFactor - Max compression percentage
+ */
+export function calculateTheoreticalThickness(
+  foamThickness: number,
+  compressionFactor: number,
+): number {
+  if (compressionFactor <= 0) return 0
+  return foamThickness * (compressionFactor / 100)
 }

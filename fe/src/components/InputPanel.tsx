@@ -1,11 +1,16 @@
 import type { Component } from 'solid-js'
+import { Show } from 'solid-js'
+import type { CalculationMode } from '../types/physics'
 
 interface InputPanelProps {
+  mode: CalculationMode
   impactSpeed: number
+  foamThickness: number
   jerkG: number
   maxG: number
   compressionFactor: number
   onImpactSpeedChange: (value: number) => void
+  onFoamThicknessChange: (value: number) => void
   onJerkGChange: (value: number) => void
   onMaxGChange: (value: number) => void
   onCompressionFactorChange: (value: number) => void
@@ -23,24 +28,47 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
       <h2 class="text-lg font-semibold">Inputs</h2>
 
       <div class="grid gap-4 sm:grid-cols-2">
-        <label class="flex flex-col gap-1">
-          <span class="text-sm font-medium text-gray-700">Impact speed</span>
-          <div class="flex items-center gap-2">
-            <input
-              type="number"
-              inputmode="decimal"
-              min="0"
-              step="0.1"
-              value={props.impactSpeed}
-              onInput={(e) => props.onImpactSpeedChange(parseNumberInput(e))}
-              class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <span class="text-sm text-gray-500 whitespace-nowrap">m/s</span>
-          </div>
-          <span class="text-xs text-gray-500">
-            Vertical speed at impact (e.g. 5.7 m/s ≈ EN drop test)
-          </span>
-        </label>
+        {/* Impact Speed - only in thickness mode */}
+        <Show when={props.mode === 'thickness'}>
+          <label class="flex flex-col gap-1">
+            <span class="text-sm font-medium text-gray-700">Impact speed</span>
+            <div class="flex items-center gap-2">
+              <input
+                type="number"
+                inputmode="decimal"
+                min="0"
+                step="0.1"
+                value={props.impactSpeed}
+                onInput={(e) => props.onImpactSpeedChange(parseNumberInput(e))}
+                class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <span class="text-sm text-gray-500 whitespace-nowrap">m/s</span>
+            </div>
+            <span class="text-xs text-gray-500">
+              Vertical speed at impact (e.g. 5.7 m/s ≈ EN drop test)
+            </span>
+          </label>
+        </Show>
+
+        {/* Foam Thickness - only in speed mode */}
+        <Show when={props.mode === 'speed'}>
+          <label class="flex flex-col gap-1">
+            <span class="text-sm font-medium text-gray-700">Foam thickness</span>
+            <div class="flex items-center gap-2">
+              <input
+                type="number"
+                inputmode="decimal"
+                min="0"
+                step="0.5"
+                value={props.foamThickness}
+                onInput={(e) => props.onFoamThicknessChange(parseNumberInput(e))}
+                class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <span class="text-sm text-gray-500 whitespace-nowrap">cm</span>
+            </div>
+            <span class="text-xs text-gray-500">Uncompressed foam protector thickness</span>
+          </label>
+        </Show>
 
         <label class="flex flex-col gap-1">
           <span class="text-sm font-medium text-gray-700">Max jerk</span>
