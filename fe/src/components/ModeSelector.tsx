@@ -49,11 +49,11 @@ export const ModeSelector: Component<ModeSelectorProps> = (props) => {
             {(config) => (
               <button
                 onClick={() => props.onModeChange(config.mode)}
-                class={`flex-1 sm:flex-none px-3 py-2 text-sm font-medium transition-colors border-r border-black last:border-r-0 ${
-                  props.mode === config.mode
-                    ? 'bg-neutral-900 text-white'
-                    : 'bg-white text-gray-900 hover:bg-gray-100'
-                }`}
+                class="flex-1 sm:flex-none px-3 py-2 text-sm font-medium transition-colors border-r border-black last:border-r-0"
+                classList={{
+                  'bg-neutral-900 text-white': props.mode === config.mode,
+                  'bg-white text-gray-900 hover:bg-gray-100': props.mode !== config.mode,
+                }}
               >
                 {config.label}
               </button>

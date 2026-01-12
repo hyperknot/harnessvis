@@ -2,6 +2,43 @@ import type { Component } from 'solid-js'
 import { Show } from 'solid-js'
 import type { CalculationMode } from '../types/physics'
 
+// Reusable number input component
+const NumberInput: Component<{
+  label: string
+  value: number
+  unit: string
+  hint: string
+  min?: number
+  max?: number
+  step?: number
+  onChange: (value: number) => void
+}> = (props) => {
+  const parse = (e: Event & { currentTarget: HTMLInputElement }) => {
+    const v = Number.parseFloat(e.currentTarget.value)
+    return Number.isFinite(v) ? v : 0
+  }
+
+  return (
+    <label class="flex flex-col gap-1">
+      <span class="font-medium text-gray-700">{props.label}</span>
+      <div class="flex items-center gap-2">
+        <input
+          type="number"
+          inputmode="decimal"
+          min={props.min ?? 0}
+          max={props.max}
+          step={props.step ?? 1}
+          value={props.value}
+          onInput={(e) => props.onChange(parse(e))}
+          class="w-full border border-neutral-500 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-black"
+        />
+        <span class="text-gray-500 whitespace-nowrap">{props.unit}</span>
+      </div>
+      <span class="text-xs text-gray-500">{props.hint}</span>
+    </label>
+  )
+}
+
 interface InputPanelProps {
   mode: CalculationMode
   impactSpeed: number
@@ -18,21 +55,9 @@ interface InputPanelProps {
 }
 
 export const InputPanel: Component<InputPanelProps> = (props) => {
-  const parseNumberInput = (e: Event & { currentTarget: HTMLInputElement }) => {
-    const v = Number.parseFloat(e.currentTarget.value)
-    return Number.isFinite(v) ? v : 0
-  }
-
-  // Show impact speed in: thickness, jerk, peakG modes
   const showImpactSpeed = () => props.mode !== 'speed'
-
-  // Show foam thickness in: speed, jerk, peakG modes
   const showFoamThickness = () => props.mode !== 'thickness'
-
-  // Show jerk input in: thickness, speed, peakG modes (not in jerk mode since that's the output)
   const showJerk = () => props.mode !== 'jerk'
-
-  // Show max G input in: thickness, speed, jerk modes (not in peakG mode)
   const showMaxG = () => props.mode !== 'peakG'
 
   return (
@@ -40,109 +65,61 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
       <h2 class="text-lg font-semibold">Inputs</h2>
 
       <div class="grid gap-4 text-sm">
-        {/* Impact Speed - in thickness, jerk, peakG modes */}
         <Show when={showImpactSpeed()}>
-          <label class="flex flex-col gap-1">
-            <span class=" font-medium text-gray-700">Impact speed</span>
-            <div class="flex items-center gap-2">
-              <input
-                type="number"
-                inputmode="decimal"
-                min="0"
-                step="0.1"
-                value={props.impactSpeed}
-                onInput={(e) => props.onImpactSpeedChange(parseNumberInput(e))}
-                class="w-full border border-neutral-500 px-2 py-1.5  focus:outline-none focus:ring-1 focus:ring-black"
-              />
-              <span class=" text-gray-500 whitespace-nowrap">m/s</span>
-            </div>
-            <span class="text-xs text-gray-500">
-              Vertical speed at impact (e.g. 5.7 m/s ≈ EN drop test)
-            </span>
-          </label>
+          <NumberInput
+            label="Impact speed"
+            value={props.impactSpeed}
+            unit="m/s"
+            hint="Vertical speed at impact (e.g. 5.7 m/s = EN drop test)"
+            step={0.1}
+            onChange={props.onImpactSpeedChange}
+          />
         </Show>
 
-        {/* Foam Thickness - in speed, jerk, peakG modes */}
         <Show when={showFoamThickness()}>
-          <label class="flex flex-col gap-1">
-            <span class=" font-medium text-gray-700">Foam thickness</span>
-            <div class="flex items-center gap-2">
-              <input
-                type="number"
-                inputmode="decimal"
-                min="0"
-                step="0.5"
-                value={props.foamThickness}
-                onInput={(e) => props.onFoamThicknessChange(parseNumberInput(e))}
-                class="w-full border border-neutral-500 px-2 py-1.5  focus:outline-none focus:ring-1 focus:ring-black"
-              />
-              <span class=" text-gray-500 whitespace-nowrap">cm</span>
-            </div>
-            <span class="text-xs text-gray-500">Uncompressed foam protector thickness</span>
-          </label>
+          <NumberInput
+            label="Foam thickness"
+            value={props.foamThickness}
+            unit="cm"
+            hint="Uncompressed foam protector thickness"
+            step={0.5}
+            onChange={props.onFoamThicknessChange}
+          />
         </Show>
 
-        {/* Max Jerk - in thickness, speed, peakG modes */}
         <Show when={showJerk()}>
-          <label class="flex flex-col gap-1">
-            <span class=" font-medium text-gray-700">Max jerk</span>
-            <div class="flex items-center gap-2">
-              <input
-                type="number"
-                inputmode="decimal"
-                min="0"
-                step="50"
-                value={props.jerkG}
-                onInput={(e) => props.onJerkGChange(parseNumberInput(e))}
-                class="w-full border border-neutral-500 px-2 py-1.5  focus:outline-none focus:ring-1 focus:ring-black"
-              />
-              <span class=" text-gray-500 whitespace-nowrap">G/s</span>
-            </div>
-            <span class="text-xs text-gray-500">
-              Rate of onset limit (e.g. 1300 G/s from NASA study)
-            </span>
-          </label>
+          <NumberInput
+            label="Max jerk"
+            value={props.jerkG}
+            unit="G/s"
+            hint="Rate of onset limit (e.g. 1300 G/s from NASA study)"
+            step={50}
+            onChange={props.onJerkGChange}
+          />
         </Show>
 
-        {/* Max G - in thickness, speed, jerk modes */}
         <Show when={showMaxG()}>
-          <label class="flex flex-col gap-1">
-            <span class=" font-medium text-gray-700">Max allowed G</span>
-            <div class="flex items-center gap-2">
-              <input
-                type="number"
-                inputmode="decimal"
-                min="1"
-                step="1"
-                value={props.maxG}
-                onInput={(e) => props.onMaxGChange(parseNumberInput(e))}
-                class="w-full border border-neutral-500 px-2 py-1.5  focus:outline-none focus:ring-1 focus:ring-black"
-              />
-              <span class=" text-gray-500 whitespace-nowrap">G</span>
-            </div>
-            <span class="text-xs text-gray-500">Peak deceleration cap (e.g. EN 42 G)</span>
-          </label>
+          <NumberInput
+            label="Max allowed G"
+            value={props.maxG}
+            unit="G"
+            hint="Peak deceleration cap (e.g. EN 42 G)"
+            min={1}
+            step={1}
+            onChange={props.onMaxGChange}
+          />
         </Show>
 
-        <label class="flex flex-col gap-1">
-          <span class=" font-medium text-gray-700">Max foam compression</span>
-          <div class="flex items-center gap-2">
-            <input
-              type="number"
-              inputmode="decimal"
-              min="1"
-              max="99"
-              step="1"
-              value={props.compressionFactor}
-              onInput={(e) => props.onCompressionFactorChange(parseNumberInput(e))}
-              class="w-full border border-neutral-500 px-2 py-1.5  focus:outline-none focus:ring-1 focus:ring-black"
-            />
-            <span class=" text-gray-500 whitespace-nowrap">%</span>
-          </div>
-          <span class="text-xs text-gray-500">
-            Used to convert foam thickness ↔ available compression stroke (before bottoming out)
-          </span>
-        </label>
+        <NumberInput
+          label="Max foam compression"
+          value={props.compressionFactor}
+          unit="%"
+          hint="Foam thickness to compression stroke (before bottoming out)"
+          min={1}
+          max={99}
+          step={1}
+          onChange={props.onCompressionFactorChange}
+        />
       </div>
 
       {props.errorMessage && (
