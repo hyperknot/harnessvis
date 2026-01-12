@@ -33,15 +33,13 @@ const severeInjuryLowerBorder: Array<[number, number]> = [
 ]
 
 const ejectionSeatLimits: Array<[number, number]> = [
-  [0.002, 110], // Top left
-  [0.004, 26], // Left side transitioning down
-  [0.005, 18.0], // Lower horizontal start
-  [0.5, 18.0], // Lower horizontal end (right side)
-  [0.5, 22.7], // Right side going up
-  [0.005, 22.7], // Upper horizontal end (left side)
-  [0.004, 32], // Left notch
-  [0.002, 135], // Left peak
-  [0.002, 110], // Close back to start
+  [0.0019806895449587148, 94.15896847927742], // Top left (line 4 & 6)
+  [0.004193292154673674, 17.96292886154017], // Lower left (line 2 & 6)
+  [0.49909592952668713, 17.96292886154017], // Lower right (line 2 & 3)
+  [0.4990959295266872, 22.86578914550784], // Upper right (line 1 & 3)
+  [0.00483414491763791, 22.865789145507833], // Upper left (line 5 & 1)
+  [0.0019806895449587148, 146.16197658996717], // Left peak (line 4 & 5)
+  [0.0019806895449587148, 94.15896847927742], // Close back to start
 ]
 
 /**
@@ -108,12 +106,6 @@ export const EibandChart: Component<EibandChartProps> = (props) => {
 
     const data = calculateGDurationPairs(props.peakG, props.t1, props.t2)
 
-    // Y-axis max: accommodate both reference curves and user profile
-    let yMax = 200
-    if (props.peakG > 150) {
-      yMax = 10 ** Math.ceil(Math.log10(props.peakG * 1.2))
-    }
-
     const option: echarts.EChartsOption = {
       animation: false,
       grid: { left: 60, right: 20, top: 60, bottom: 50 },
@@ -140,7 +132,7 @@ export const EibandChart: Component<EibandChartProps> = (props) => {
         nameLocation: 'middle',
         nameGap: 30,
         min: 0.001,
-        max: 1,
+        max: 0.15,
         axisLabel: {
           formatter: (value: number) => {
             if (value < 1) return `${Math.round(value * 1000)}ms`
@@ -156,7 +148,7 @@ export const EibandChart: Component<EibandChartProps> = (props) => {
         type: 'log',
         name: 'Acceleration (G)',
         min: 1,
-        max: yMax,
+        max: 100,
         axisLabel: { formatter: '{value}' },
         splitLine: {
           show: true,

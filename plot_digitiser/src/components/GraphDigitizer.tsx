@@ -323,6 +323,119 @@ function imageToDataUrl(img: HTMLImageElement): string | null {
   }
 }
 
+// Calculate intersection of two infinite lines defined by two points each
+// Returns null if lines are parallel
+function lineIntersection(
+  p1: { x: number; y: number },
+  p2: { x: number; y: number },
+  p3: { x: number; y: number },
+  p4: { x: number; y: number },
+): { x: number; y: number } | null {
+  const x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y
+  const x3 = p3.x, y3 = p3.y, x4 = p4.x, y4 = p4.y
+
+  const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+  if (Math.abs(denom) < 1e-12) return null // parallel lines
+
+  const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom
+
+  return {
+    x: x1 + t * (x2 - x1),
+    y: y1 + t * (y2 - y1),
+  }
+}
+
+// Check if two lines are parallel (cannot intersect)
+function areLinesParallel(
+  line1: { start: { x: number; y: number }; end: { x: number; y: number } },
+  line2: { start: { x: number; y: number }; end: { x: number; y: number } },
+): boolean {
+  const dx1 = line1.end.x - line1.start.x
+  const dy1 = line1.end.y - line1.start.y
+  const dx2 = line2.end.x - line2.start.x
+  const dy2 = line2.end.y - line2.start.y
+
+  // Cross product of direction vectors - if near zero, lines are parallel
+  const cross = dx1 * dy2 - dy1 * dx2
+  return Math.abs(cross) < 1e-10
+}
+
+// Calculate minimum distance between endpoints of two line segments
+function minEndpointDistance(
+  line1: { start: { x: number; y: number }; end: { x: number; y: number } },
+  line2: { start: { x: number; y: number }; end: { x: number; y: number } },
+): number {
+  const dist = (p1: { x: number; y: number }, p2: { x: number; y: number }) => {
+    const dx = p1.x - p2.x
+    const dy = p1.y - p2.y
+    return Math.sqrt(dx * dx + dy * dy)
+  }
+
+  return Math.min(
+    dist(line1.start, line2.start),
+    dist(line1.start, line2.end),
+    dist(line1.end, line2.start),
+    dist(line1.end, line2.end),
+  )
+}
+
+interface LineData {
+  id: number
+  type: string
+  start: { x: number; y: number }
+  end: { x: number; y: number }
+}
+
+interface IntersectionResult {
+  lineIds: [number, number]
+  point: { x: number; y: number }
+}
+
+// For each line, find the 2 closest non-parallel lines and calculate intersections
+function calculateLineIntersections(lines: Array<LineData>): Array<IntersectionResult> {
+  if (lines.length < 2) return []
+
+  const intersections: Array<IntersectionResult> = []
+  const seenPairs = new Set<string>()
+
+  for (const line of lines) {
+    // Find all non-parallel lines with their endpoint distances
+    const candidates: Array<{ other: LineData; distance: number }> = []
+
+    for (const other of lines) {
+      if (other.id === line.id) continue
+      if (areLinesParallel(line, other)) continue
+
+      const dist = minEndpointDistance(line, other)
+      candidates.push({ other, distance: dist })
+    }
+
+    // Sort by distance and take the 2 closest
+    candidates.sort((a, b) => a.distance - b.distance)
+    const closest2 = candidates.slice(0, 2)
+
+    // Calculate intersections with the 2 closest lines
+    for (const { other } of closest2) {
+      // Create a unique key for this pair (smaller id first)
+      const pairKey = line.id < other.id ? `${line.id}-${other.id}` : `${other.id}-${line.id}`
+
+      // Skip if we've already calculated this pair
+      if (seenPairs.has(pairKey)) continue
+      seenPairs.add(pairKey)
+
+      const intersection = lineIntersection(line.start, line.end, other.start, other.end)
+      if (intersection) {
+        intersections.push({
+          lineIds: [line.id, other.id],
+          point: intersection,
+        })
+      }
+    }
+  }
+
+  return intersections
+}
+
 // Format a number without scientific notation, with reasonable precision
 function formatNumber(n: number): string {
   if (n === 0) return '0'
@@ -353,30 +466,33 @@ function formatNumber(n: number): string {
   return Math.round(n).toString()
 }
 
-// Calculate error as percentage of axis span for a calibration point
-// Returns the perpendicular distance from the point to the fitted axis line,
-// expressed as a percentage of the total axis length
-function calculatePointError(point: PixelPoint, fit: AxisFit | null): number {
-  if (!fit || fit.axisLength < 1) return 0
+// Calculate value-based error for a calibration point
+// Returns the difference between the assigned value and the predicted value from the fit,
+// expressed as a percentage error: |assigned - predicted| / predicted * 100
+function calculatePointError(point: CalibrationPoint, fit: AxisFit | null): number {
+  if (!fit || point.value <= 0) return 0
 
-  // Vector from origin to point
-  const dx = point.x - fit.origin.x
-  const dy = point.y - fit.origin.y
+  // Calculate distance along the axis from origin to this point
+  const dist = (point.x - fit.origin.x) * fit.dirX + (point.y - fit.origin.y) * fit.dirY
 
-  // Project onto direction (dot product)
-  const dot = dx * fit.dirX + dy * fit.dirY
+  // Predicted log10 value based on the fit
+  const predictedLog = fit.slope * dist + fit.intercept
+  const predictedValue = 10 ** predictedLog
 
-  // Closest point on the axis line
-  const closestX = fit.origin.x + dot * fit.dirX
-  const closestY = fit.origin.y + dot * fit.dirY
+  // Actual assigned value
+  const actualValue = point.value
 
-  // Perpendicular distance in pixels
-  const distX = point.x - closestX
-  const distY = point.y - closestY
-  const perpDistance = Math.sqrt(distX * distX + distY * distY)
+  // Percentage error: |actual - predicted| / predicted * 100
+  const error = (Math.abs(actualValue - predictedValue) / predictedValue) * 100
 
-  // Return as percentage of axis span
-  return (perpDistance / fit.axisLength) * 100
+  console.log('[DEBUG] calculatePointError:', {
+    pointId: point.id,
+    actualValue,
+    predictedValue: predictedValue.toFixed(4),
+    errorPercent: error.toFixed(2),
+  })
+
+  return error
 }
 
 export const GraphDigitizer: Component = () => {
@@ -403,6 +519,10 @@ export const GraphDigitizer: Component = () => {
   const [currentLinePoints, setCurrentLinePoints] = createSignal<Array<PixelPoint>>([])
   const [nextLineId, setNextLineId] = createSignal(1)
 
+  // Intersections state (generated on demand)
+  const [intersections, setIntersections] = createSignal<Array<IntersectionResult>>([])
+  const [intersectionPixels, setIntersectionPixels] = createSignal<Array<PixelPoint>>([]) // For drawing on canvas
+
   // Refs
   let canvasRef: HTMLCanvasElement | undefined
   let imageRef: HTMLImageElement | undefined
@@ -413,8 +533,20 @@ export const GraphDigitizer: Component = () => {
   const [isDragOver, setIsDragOver] = createSignal(false)
 
   // Computed axis fits
-  const xAxisFit = createMemo(() => fitAxis(xAxisPoints(), 'x'))
-  const yAxisFit = createMemo(() => fitAxis(yAxisPoints(), 'y'))
+  const xAxisFit = createMemo(() => {
+    const points = xAxisPoints()
+    console.log('[DEBUG] xAxisFit recalculating, points:', points.map(p => ({ id: p.id, value: p.value })))
+    const fit = fitAxis(points, 'x')
+    console.log('[DEBUG] xAxisFit result:', fit)
+    return fit
+  })
+  const yAxisFit = createMemo(() => {
+    const points = yAxisPoints()
+    console.log('[DEBUG] yAxisFit recalculating, points:', points.map(p => ({ id: p.id, value: p.value })))
+    const fit = fitAxis(points, 'y')
+    console.log('[DEBUG] yAxisFit result:', fit)
+    return fit
+  })
 
   const isCalibrated = createMemo(() => xAxisFit() !== null && yAxisFit() !== null)
 
@@ -449,6 +581,44 @@ export const GraphDigitizer: Component = () => {
         end: line.endReal,
       }))
   })
+
+  // Calculate intersections from lines
+  const calculateIntersections = () => {
+    const data = exportData()
+    if (data.length < 2) {
+      setIntersections([])
+      setIntersectionPixels([])
+      return
+    }
+
+    const xFit = xAxisFit()
+    const yFit = yAxisFit()
+    if (!xFit || !yFit) {
+      setIntersections([])
+      setIntersectionPixels([])
+      return
+    }
+
+    const linesWithCoords = data
+      .filter((d) => d.start && d.end)
+      .map((d) => ({
+        id: d.id,
+        type: d.type,
+        start: d.start as { x: number; y: number },
+        end: d.end as { x: number; y: number },
+      }))
+
+    const results = calculateLineIntersections(linesWithCoords)
+    setIntersections(results)
+
+    // Convert to pixel coordinates for drawing
+    const pixels: Array<PixelPoint> = []
+    for (const r of results) {
+      const pixel = realToPixel(r.point, xFit, yFit)
+      if (pixel) pixels.push(pixel)
+    }
+    setIntersectionPixels(pixels)
+  }
 
   // Handle image file input
   const handleFileInput = (e: Event) => {
@@ -681,8 +851,10 @@ export const GraphDigitizer: Component = () => {
 
   // Commit value from input string to state
   const commitCalibrationValue = (axis: 'x' | 'y', id: number, valueStr: string) => {
+    console.log('[DEBUG] commitCalibrationValue called:', { axis, id, valueStr })
     const val = Number.parseFloat(valueStr)
     const num = Number.isNaN(val) ? 0 : val
+    console.log('[DEBUG] parsed value:', num)
 
     // Clear the temporary input string
     setInputStrings((prev) => {
@@ -692,7 +864,12 @@ export const GraphDigitizer: Component = () => {
     })
 
     const updateFn = axis === 'x' ? setXAxisPoints : setYAxisPoints
-    updateFn((prev) => prev.map((p) => (p.id === id ? { ...p, value: num } : p)))
+    updateFn((prev) => {
+      const newPoints = prev.map((p) => (p.id === id ? { ...p, value: num } : p))
+      console.log('[DEBUG] updating points, old:', prev.map(p => ({ id: p.id, value: p.value })))
+      console.log('[DEBUG] updating points, new:', newPoints.map(p => ({ id: p.id, value: p.value })))
+      return newPoints
+    })
   }
 
   // Handle input change (store raw string)
@@ -799,6 +976,8 @@ export const GraphDigitizer: Component = () => {
     setCurrentLinePoints([])
     setActivePointId(null)
     setInputStrings(new Map())
+    setIntersections([])
+    setIntersectionPixels([])
     setMode('idle')
   }
 
@@ -937,6 +1116,20 @@ export const GraphDigitizer: Component = () => {
         ctx.setLineDash([])
       }
     }
+
+    // Draw intersection points if calculated
+    const intPixels = intersectionPixels()
+    if (intPixels.length > 0) {
+      ctx.fillStyle = '#a855f7' // purple-500
+      ctx.strokeStyle = '#fff'
+      ctx.lineWidth = 2
+      for (const p of intPixels) {
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, 10, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.stroke()
+      }
+    }
   }
 
   // Re-render on state changes
@@ -947,6 +1140,7 @@ export const GraphDigitizer: Component = () => {
     lines()
     currentLinePoints()
     activePointId()
+    intersectionPixels()
     renderCanvas()
   })
 
@@ -1061,6 +1255,14 @@ export const GraphDigitizer: Component = () => {
               >
                 Clear All
               </button>
+              <span class="text-gray-300">|</span>
+              <button
+                class="px-4 py-2 rounded border bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={calculateIntersections}
+                disabled={exportData().length < 2}
+              >
+                Calculate Intersections
+              </button>
             </div>
 
             {/* Calibration status */}
@@ -1157,9 +1359,24 @@ export const GraphDigitizer: Component = () => {
               <ul class="space-y-2">
                 <For each={xAxisPoints()}>
                   {(p, index) => {
-                    const rawInput = inputStrings().get(p.id)
-                    const displayValue = rawInput !== undefined ? rawInput : (p.value === 0 ? '' : String(p.value))
-                    const error = calculatePointError(p, xAxisFit())
+                    // Access current point reactively from the array (p is a static snapshot)
+                    const currentPoint = () => xAxisPoints().find((pt) => pt.id === p.id) ?? p
+                    const rawInput = () => inputStrings().get(p.id)
+                    const displayValue = () => {
+                      const raw = rawInput()
+                      const pt = currentPoint()
+                      return raw !== undefined ? raw : pt.value === 0 ? '' : String(pt.value)
+                    }
+                    // Compute error reactively - depends on both point and fit
+                    const pointError = () => {
+                      const fit = xAxisFit()
+                      const pt = currentPoint()
+                      console.log('[DEBUG] X pointError() called for id:', p.id, 'pt.value:', pt.value, 'fit:', fit ? 'exists' : 'null')
+                      if (!fit || pt.value <= 0) return null
+                      const err = calculatePointError(pt, fit)
+                      console.log('[DEBUG] X pointError result:', err)
+                      return err
+                    }
                     return (
                       <li class="flex items-center gap-2 text-sm py-1 border-b last:border-0">
                         <span class="w-6 text-gray-400 text-xs">#{index() + 1}</span>
@@ -1171,17 +1388,23 @@ export const GraphDigitizer: Component = () => {
                           type="text"
                           class="border rounded px-2 py-1 w-32 text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none"
                           placeholder="Value"
-                          value={displayValue}
+                          value={displayValue()}
                           onInput={(e) => handleCalibrationInput(p.id, e.currentTarget.value)}
                           onFocus={() => setActivePointId(p.id)}
                           onBlur={(e) => commitCalibrationValue('x', p.id, e.currentTarget.value)}
                           onKeyDown={(e) => handleCalibrationKeyDown(e, index(), 'x', p.id)}
                         />
-                        <Show when={p.value > 0 && xAxisFit()}>
-                          <span class="text-xs text-gray-400 w-14 text-right" title="Deviation from axis as % of axis span">
-                            ±{error.toFixed(2)}%
-                          </span>
-                        </Show>
+                        <span
+                          class="text-xs text-gray-400 w-14 text-right"
+                          title="Deviation from axis as % of axis span"
+                        >
+                          {(() => {
+                            const err = pointError()
+                            const text = err !== null ? `±${err.toFixed(2)}%` : ''
+                            console.log('[DEBUG] X render error for id:', p.id, 'text:', text)
+                            return text
+                          })()}
+                        </span>
                         <button
                           class="text-red-400 hover:text-red-600 text-sm p-1 ml-auto"
                           onClick={() => deleteCalibrationPoint('x', p.id)}
@@ -1212,9 +1435,24 @@ export const GraphDigitizer: Component = () => {
               <ul class="space-y-2">
                 <For each={yAxisPoints()}>
                   {(p, index) => {
-                    const rawInput = inputStrings().get(p.id)
-                    const displayValue = rawInput !== undefined ? rawInput : (p.value === 0 ? '' : String(p.value))
-                    const error = calculatePointError(p, yAxisFit())
+                    // Access current point reactively from the array (p is a static snapshot)
+                    const currentPoint = () => yAxisPoints().find((pt) => pt.id === p.id) ?? p
+                    const rawInput = () => inputStrings().get(p.id)
+                    const displayValue = () => {
+                      const raw = rawInput()
+                      const pt = currentPoint()
+                      return raw !== undefined ? raw : pt.value === 0 ? '' : String(pt.value)
+                    }
+                    // Compute error reactively - depends on both point and fit
+                    const pointError = () => {
+                      const fit = yAxisFit()
+                      const pt = currentPoint()
+                      console.log('[DEBUG] Y pointError() called for id:', p.id, 'pt.value:', pt.value, 'fit:', fit ? 'exists' : 'null')
+                      if (!fit || pt.value <= 0) return null
+                      const err = calculatePointError(pt, fit)
+                      console.log('[DEBUG] Y pointError result:', err)
+                      return err
+                    }
                     return (
                       <li class="flex items-center gap-2 text-sm py-1 border-b last:border-0">
                         <span class="w-6 text-gray-400 text-xs">#{index() + 1}</span>
@@ -1226,17 +1464,23 @@ export const GraphDigitizer: Component = () => {
                           type="text"
                           class="border rounded px-2 py-1 w-32 text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none"
                           placeholder="Value"
-                          value={displayValue}
+                          value={displayValue()}
                           onInput={(e) => handleCalibrationInput(p.id, e.currentTarget.value)}
                           onFocus={() => setActivePointId(p.id)}
                           onBlur={(e) => commitCalibrationValue('y', p.id, e.currentTarget.value)}
                           onKeyDown={(e) => handleCalibrationKeyDown(e, index(), 'y', p.id)}
                         />
-                        <Show when={p.value > 0 && yAxisFit()}>
-                          <span class="text-xs text-gray-400 w-14 text-right" title="Deviation from axis as % of axis span">
-                            ±{error.toFixed(2)}%
-                          </span>
-                        </Show>
+                        <span
+                          class="text-xs text-gray-400 w-14 text-right"
+                          title="Deviation from axis as % of axis span"
+                        >
+                          {(() => {
+                            const err = pointError()
+                            const text = err !== null ? `±${err.toFixed(2)}%` : ''
+                            console.log('[DEBUG] Y render error for id:', p.id, 'text:', text)
+                            return text
+                          })()}
+                        </span>
                         <button
                           class="text-red-400 hover:text-red-600 text-sm p-1 ml-auto"
                           onClick={() => deleteCalibrationPoint('y', p.id)}
@@ -1264,8 +1508,7 @@ export const GraphDigitizer: Component = () => {
                         <strong>#{line.id}</strong> ({line.type})
                         {line.startReal && line.endReal && (
                           <span class="ml-2 text-gray-600">
-                            ({formatNumber(line.startReal.x)},{' '}
-                            {formatNumber(line.startReal.y)}) → (
+                            ({formatNumber(line.startReal.x)}, {formatNumber(line.startReal.y)}) → (
                             {formatNumber(line.endReal.x)}, {formatNumber(line.endReal.y)})
                           </span>
                         )}
@@ -1286,7 +1529,7 @@ export const GraphDigitizer: Component = () => {
           {/* Export JSON */}
           <Show when={exportData().length > 0}>
             <div class="bg-white rounded-lg shadow-sm border p-4 space-y-2">
-              <h3 class="font-semibold">Export JSON</h3>
+              <h3 class="font-semibold">Export Lines JSON</h3>
               <textarea
                 class="w-full h-64 font-mono text-sm border rounded p-2"
                 readOnly
@@ -1302,6 +1545,46 @@ export const GraphDigitizer: Component = () => {
                 Copy to Clipboard
               </button>
             </div>
+          </Show>
+
+          {/* Intersections Export */}
+          <Show when={intersections().length > 0}>
+            {(() => {
+              const points = () => intersections().map((i) => [i.point.x, i.point.y])
+              return (
+                <div class="bg-white rounded-lg shadow-sm border p-4 space-y-2">
+                  <h3 class="font-semibold text-purple-600">Line Intersections</h3>
+                  <p class="text-sm text-gray-600">
+                    Found {intersections().length} intersection points from {exportData().length} lines.
+                  </p>
+                  <textarea
+                    class="w-full h-48 font-mono text-sm border rounded p-2"
+                    readOnly
+                    value={JSON.stringify(points(), null, 2)}
+                  />
+                  <div class="flex gap-2">
+                    <button
+                      class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+                      onClick={() => {
+                        navigator.clipboard.writeText(JSON.stringify(points(), null, 2))
+                        alert('Intersections copied to clipboard!')
+                      }}
+                    >
+                      Copy to Clipboard
+                    </button>
+                    <button
+                      class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
+                      onClick={() => {
+                        setIntersections([])
+                        setIntersectionPixels([])
+                      }}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              )
+            })()}
           </Show>
         </Show>
 
