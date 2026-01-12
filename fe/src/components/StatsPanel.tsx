@@ -14,7 +14,7 @@ export const StatsPanel: Component<StatsPanelProps> = (props) => {
   const isOverAnyLimit = () => isOver38GLimit() || isOver20GLimit()
 
   return (
-    <section class={`border border-black p-3 space-y-4 ${props.class || ''}`}>
+    <section class={`p-4 space-y-4 ${props.class || ''}`}>
       <h2 class="text-lg font-semibold">Profile timing</h2>
 
       <div class="grid gap-2 text-sm">
@@ -39,7 +39,7 @@ export const StatsPanel: Component<StatsPanelProps> = (props) => {
           </span>
         </div>
 
-        <div class="pt-2 border-t border-black mt-2 space-y-2">
+        <div class="pt-2 border-t border-neutral-400 mt-2 space-y-2">
           <div class="flex justify-between">
             <span class="text-gray-600">Time over 38 G:</span>
             <span

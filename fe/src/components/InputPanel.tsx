@@ -36,14 +36,14 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
   const showMaxG = () => props.mode !== 'peakG'
 
   return (
-    <section class="border border-black p-3 space-y-4">
+    <section class="p-4 space-y-4">
       <h2 class="text-lg font-semibold">Inputs</h2>
 
-      <div class="grid gap-4">
+      <div class="grid gap-4 text-sm">
         {/* Impact Speed - in thickness, jerk, peakG modes */}
         <Show when={showImpactSpeed()}>
           <label class="flex flex-col gap-1">
-            <span class="text-sm font-medium text-gray-700">Impact speed</span>
+            <span class=" font-medium text-gray-700">Impact speed</span>
             <div class="flex items-center gap-2">
               <input
                 type="number"
@@ -52,9 +52,9 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
                 step="0.1"
                 value={props.impactSpeed}
                 onInput={(e) => props.onImpactSpeedChange(parseNumberInput(e))}
-                class="w-full border border-black px-2 py-1.5 text-base focus:outline-none focus:ring-1 focus:ring-black"
+                class="w-full border border-neutral-500 px-2 py-1.5  focus:outline-none focus:ring-1 focus:ring-black"
               />
-              <span class="text-sm text-gray-500 whitespace-nowrap">m/s</span>
+              <span class=" text-gray-500 whitespace-nowrap">m/s</span>
             </div>
             <span class="text-xs text-gray-500">
               Vertical speed at impact (e.g. 5.7 m/s ≈ EN drop test)
@@ -65,7 +65,7 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
         {/* Foam Thickness - in speed, jerk, peakG modes */}
         <Show when={showFoamThickness()}>
           <label class="flex flex-col gap-1">
-            <span class="text-sm font-medium text-gray-700">Foam thickness</span>
+            <span class=" font-medium text-gray-700">Foam thickness</span>
             <div class="flex items-center gap-2">
               <input
                 type="number"
@@ -74,9 +74,9 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
                 step="0.5"
                 value={props.foamThickness}
                 onInput={(e) => props.onFoamThicknessChange(parseNumberInput(e))}
-                class="w-full border border-black px-2 py-1.5 text-base focus:outline-none focus:ring-1 focus:ring-black"
+                class="w-full border border-neutral-500 px-2 py-1.5  focus:outline-none focus:ring-1 focus:ring-black"
               />
-              <span class="text-sm text-gray-500 whitespace-nowrap">cm</span>
+              <span class=" text-gray-500 whitespace-nowrap">cm</span>
             </div>
             <span class="text-xs text-gray-500">Uncompressed foam protector thickness</span>
           </label>
@@ -85,7 +85,7 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
         {/* Max Jerk - in thickness, speed, peakG modes */}
         <Show when={showJerk()}>
           <label class="flex flex-col gap-1">
-            <span class="text-sm font-medium text-gray-700">Max jerk</span>
+            <span class=" font-medium text-gray-700">Max jerk</span>
             <div class="flex items-center gap-2">
               <input
                 type="number"
@@ -94,9 +94,9 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
                 step="50"
                 value={props.jerkG}
                 onInput={(e) => props.onJerkGChange(parseNumberInput(e))}
-                class="w-full border border-black px-2 py-1.5 text-base focus:outline-none focus:ring-1 focus:ring-black"
+                class="w-full border border-neutral-500 px-2 py-1.5  focus:outline-none focus:ring-1 focus:ring-black"
               />
-              <span class="text-sm text-gray-500 whitespace-nowrap">G/s</span>
+              <span class=" text-gray-500 whitespace-nowrap">G/s</span>
             </div>
             <span class="text-xs text-gray-500">
               Rate of onset limit (e.g. 1300 G/s from NASA study)
@@ -107,7 +107,7 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
         {/* Max G - in thickness, speed, jerk modes */}
         <Show when={showMaxG()}>
           <label class="flex flex-col gap-1">
-            <span class="text-sm font-medium text-gray-700">Max allowed G</span>
+            <span class=" font-medium text-gray-700">Max allowed G</span>
             <div class="flex items-center gap-2">
               <input
                 type="number"
@@ -116,16 +116,16 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
                 step="1"
                 value={props.maxG}
                 onInput={(e) => props.onMaxGChange(parseNumberInput(e))}
-                class="w-full border border-black px-2 py-1.5 text-base focus:outline-none focus:ring-1 focus:ring-black"
+                class="w-full border border-neutral-500 px-2 py-1.5  focus:outline-none focus:ring-1 focus:ring-black"
               />
-              <span class="text-sm text-gray-500 whitespace-nowrap">G</span>
+              <span class=" text-gray-500 whitespace-nowrap">G</span>
             </div>
             <span class="text-xs text-gray-500">Peak deceleration cap (e.g. EN 42 G)</span>
           </label>
         </Show>
 
         <label class="flex flex-col gap-1">
-          <span class="text-sm font-medium text-gray-700">Max foam compression</span>
+          <span class=" font-medium text-gray-700">Max foam compression</span>
           <div class="flex items-center gap-2">
             <input
               type="number"
@@ -135,9 +135,9 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
               step="1"
               value={props.compressionFactor}
               onInput={(e) => props.onCompressionFactorChange(parseNumberInput(e))}
-              class="w-full border border-black px-2 py-1.5 text-base focus:outline-none focus:ring-1 focus:ring-black"
+              class="w-full border border-neutral-500 px-2 py-1.5  focus:outline-none focus:ring-1 focus:ring-black"
             />
-            <span class="text-sm text-gray-500 whitespace-nowrap">%</span>
+            <span class=" text-gray-500 whitespace-nowrap">%</span>
           </div>
           <span class="text-xs text-gray-500">
             Used to convert foam thickness ↔ available compression stroke (before bottoming out)
@@ -146,7 +146,7 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
       </div>
 
       {props.errorMessage && (
-        <div class="mt-2 border border-black bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        <div class="mt-2 border border-neutral-500 bg-red-200 px-3 py-2 text-xs text-red-950">
           {props.errorMessage}
         </div>
       )}

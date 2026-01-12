@@ -41,18 +41,18 @@ export const ModeSelector: Component<ModeSelectorProps> = (props) => {
   const currentDescription = () => modeConfig.find((c) => c.mode === props.mode)?.description ?? ''
 
   return (
-    <div class="border border-black p-3">
+    <div class="p-4">
       <div class="flex flex-col sm:flex-row sm:items-center gap-3">
         <span class="text-sm font-medium text-gray-700 shrink-0">Calculate:</span>
-        <div class="flex flex-wrap border border-black w-full sm:w-auto">
+        <div class="flex flex-wrap border border-neutral-900 w-full sm:w-auto">
           <For each={modeConfig}>
             {(config) => (
               <button
                 onClick={() => props.onModeChange(config.mode)}
                 class={`flex-1 sm:flex-none px-3 py-2 text-sm font-medium transition-colors border-r border-black last:border-r-0 ${
                   props.mode === config.mode
-                    ? 'bg-black text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-100'
+                    ? 'bg-neutral-900 text-white'
+                    : 'bg-white text-gray-900 hover:bg-gray-100'
                 }`}
               >
                 {config.label}

@@ -35,13 +35,13 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
   }
 
   return (
-    <section class="border border-black p-3">
+    <section class="p-4">
       <h2 class="text-lg font-semibold mb-3">Summary</h2>
       <div class="flex flex-col gap-2 text-sm">
         <Show when={props.mode === 'thickness'}>
           <div class="flex justify-between items-center">
             <span class="text-gray-600">Compression stroke:</span>
-            <span class="font-semibold text-blue-600">
+            <span class="font-semibold text-lg text-blue-600">
               {props.result.stopDistance
                 ? `${(props.result.stopDistance * 100).toFixed(2)} cm`
                 : '—'}
@@ -50,7 +50,7 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
 
           <div class="flex justify-between items-center">
             <span class="text-gray-600">Foam thickness:</span>
-            <span class="font-semibold text-emerald-600">
+            <span class="font-semibold text-lg text-emerald-600">
               {props.result.stopDistance ? `${foamThickness().toFixed(2)} cm` : '—'}
             </span>
           </div>
@@ -58,7 +58,7 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
           <div class="flex justify-between items-center">
             <span class="text-gray-600">{peakGLabel()}</span>
             <span
-              class="font-semibold"
+              class="font-semibold text-lg "
               classList={{
                 'text-red-600': props.result.gLimitReached,
                 'text-gray-900': !props.result.gLimitReached,
@@ -94,9 +94,7 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
 
           <div class="flex justify-between items-center">
             <span class="text-gray-600">Available stroke:</span>
-            <span class="font-semibold text-blue-600">
-              {availableStrokeLabel()}
-            </span>
+            <span class="font-semibold text-blue-600">{availableStrokeLabel()}</span>
           </div>
         </Show>
 
@@ -123,9 +121,7 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
 
           <div class="flex justify-between items-center">
             <span class="text-gray-600">Available stroke:</span>
-            <span class="font-semibold text-blue-600">
-              {availableStrokeLabel()}
-            </span>
+            <span class="font-semibold text-blue-600">{availableStrokeLabel()}</span>
           </div>
         </Show>
 
@@ -139,9 +135,7 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
 
           <div class="flex justify-between items-center">
             <span class="text-gray-600">Available stroke:</span>
-            <span class="font-semibold text-blue-600">
-              {availableStrokeLabel()}
-            </span>
+            <span class="font-semibold text-blue-600">{availableStrokeLabel()}</span>
           </div>
         </Show>
       </div>

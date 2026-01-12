@@ -108,36 +108,60 @@ export const AppUI: Component = () => {
     <div class="h-screen w-screen bg-white text-gray-900 overflow-hidden flex">
       {/* Left side - scrollable main content */}
       <div class="flex-1 h-full overflow-y-auto border-r border-black">
-        <div class="p-4 space-y-4">
-          {/* Mode selector at very top */}
+        {/* About header */}
+        <header class="p-4 border-b border-black">
+          <h1 class="text-xl font-bold tracking-tight">
+            Paragliding Harness Back Protector Visualizer
+          </h1>
+          <p class="text-sm text-gray-600 mt-1">
+            <a
+              href="https://github.com/hyperknot/harnessvis"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-blue-600 hover:underline"
+            >
+              Open source
+            </a>
+            {' project by Zsolt Ero. '}
+            <a
+              href="https://github.com/hyperknot/harnessvis/blob/main/fe/src/lib/physics.ts"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-blue-600 hover:underline"
+            >
+              Physics
+            </a>
+          </p>
+        </header>
+
+        {/* Mode selector */}
+        <div class="border-b border-black">
           <ModeSelector mode={mode()} onModeChange={setMode} />
-
-          {/* Acceleration profile section */}
-          <section class="border border-black p-3 space-y-3">
-            <div>
-              <h2 class="text-lg font-semibold">Acceleration profile</h2>
-              <p class="text-xs text-gray-500">{getProfileShapeDescription()}</p>
-            </div>
-            <AccelerationProfileChart samples={calc().result.samples} />
-          </section>
-
-          {/* Eiband chart section - scroll down to see */}
-          <section class="border border-black p-3 space-y-3">
-            <div>
-              <h2 class="text-lg font-semibold">Eiband tolerance chart</h2>
-              <p class="text-xs text-gray-500">
-                Time spent at or above each G level (log-log scale)
-              </p>
-            </div>
-            <EibandChart peakG={calc().result.peakG} t1={calc().result.t1} t2={calc().result.t2} />
-          </section>
         </div>
+
+        {/* Acceleration profile section */}
+        <section class="p-4 border-b border-black">
+          <div class="mb-2">
+            <h2 class="text-lg font-semibold">Acceleration profile</h2>
+            <p class="text-xs text-gray-500">{getProfileShapeDescription()}</p>
+          </div>
+          <AccelerationProfileChart samples={calc().result.samples} />
+        </section>
+
+        {/* Eiband chart section */}
+        <section class="p-4">
+          <div class="mb-2">
+            <h2 class="text-lg font-semibold">Eiband chart</h2>
+            <p class="text-xs text-gray-500">Time spent at or above each G level (log-log scale)</p>
+          </div>
+          <EibandChart peakG={calc().result.peakG} t1={calc().result.t1} t2={calc().result.t2} />
+        </section>
       </div>
 
-      {/* Right side - fixed sidebar */}
+      {/* Right side - scrollable sidebar */}
       <div class="w-80 h-full overflow-y-auto flex-shrink-0">
-        <div class="p-4 space-y-4">
-          {/* Inputs at top */}
+        {/* Inputs */}
+        <div class="border-b border-black">
           <InputPanel
             mode={mode()}
             impactSpeed={impactSpeed()}
@@ -152,8 +176,10 @@ export const AppUI: Component = () => {
             onCompressionFactorChange={setCompressionFactor}
             errorMessage={!calc().result.ok ? calc().result.reason : undefined}
           />
+        </div>
 
-          {/* Profile summary below */}
+        {/* Summary */}
+        <div class="border-b border-black">
           <SummaryPanel
             mode={mode()}
             result={calc().result}
@@ -163,9 +189,10 @@ export const AppUI: Component = () => {
             minJerk={calc().minJerk}
             peakG={calc().peakG}
           />
-
-          <StatsPanel result={calc().result} />
         </div>
+
+        {/* Stats */}
+        <StatsPanel result={calc().result} />
       </div>
     </div>
   )
