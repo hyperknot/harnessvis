@@ -30,78 +30,55 @@ export const AppUI: Component = () => {
   const [maxG, setMaxG] = createSignal(42) // G
   const [compressionFactor, setCompressionFactor] = createSignal(75) // %
 
-  // Computed result based on mode
-  const result = createMemo(() => {
-    const theoreticalThickness = calculateTheoreticalThickness(foamThickness(), compressionFactor())
-    const targetStopDistance = theoreticalThickness / 100 // convert cm to m
+  const calc = createMemo(() => {
+    const theoreticalThicknessCm = calculateTheoreticalThickness(
+      foamThickness(),
+      compressionFactor(),
+    )
+    const targetStopDistance = theoreticalThicknessCm / 100 // cm -> m
 
     if (mode() === 'thickness') {
-      // Mode 1: Calculate thickness from impact speed
-      return computeProfile({
+      const thicknessResult = computeProfile({
         v0: impactSpeed(),
         jerkG: jerkG(),
         maxG: maxG(),
       })
+      return {
+        result: thicknessResult,
+        maxImpactSpeed: undefined,
+        minJerk: undefined,
+        peakG: undefined,
+      }
     }
+
     if (mode() === 'speed') {
-      // Mode 2: Calculate max impact speed from thickness
-      return computeMaxImpactSpeed({
+      const { maxImpactSpeed, result: speedResult } = computeMaxImpactSpeed({
         targetStopDistance,
         jerkG: jerkG(),
         maxG: maxG(),
-      }).result
+      })
+      return { result: speedResult, maxImpactSpeed, minJerk: undefined, peakG: undefined }
     }
+
     if (mode() === 'jerk') {
-      // Mode 3: Calculate min jerk from impact speed and thickness
-      return computeMinJerk({
+      const { minJerk, result: jerkResult } = computeMinJerk({
         v0: impactSpeed(),
         targetStopDistance,
         maxG: maxG(),
-      }).result
+      })
+      return { result: jerkResult, maxImpactSpeed: undefined, minJerk, peakG: undefined }
     }
-    // Mode 4: Calculate peak G from impact speed, thickness, and jerk
-    return computePeakG({
+
+    const { peakG: computedPeakG, result } = computePeakG({
       v0: impactSpeed(),
       targetStopDistance,
       jerkG: jerkG(),
-    }).result
-  })
-
-  // Max impact speed (only relevant for mode 2)
-  const maxImpactSpeedResult = createMemo(() => {
-    if (mode() !== 'speed') return
-    const theoreticalThickness = calculateTheoreticalThickness(foamThickness(), compressionFactor())
-    return computeMaxImpactSpeed({
-      targetStopDistance: theoreticalThickness / 100,
-      jerkG: jerkG(),
-      maxG: maxG(),
-    }).maxImpactSpeed
-  })
-
-  // Min jerk (only relevant for mode 3)
-  const minJerkResult = createMemo(() => {
-    if (mode() !== 'jerk') return
-    const theoreticalThickness = calculateTheoreticalThickness(foamThickness(), compressionFactor())
-    return computeMinJerk({
-      v0: impactSpeed(),
-      targetStopDistance: theoreticalThickness / 100,
-      maxG: maxG(),
-    }).minJerk
-  })
-
-  // Peak G (only relevant for mode 4)
-  const peakGResult = createMemo(() => {
-    if (mode() !== 'peakG') return
-    const theoreticalThickness = calculateTheoreticalThickness(foamThickness(), compressionFactor())
-    return computePeakG({
-      v0: impactSpeed(),
-      targetStopDistance: theoreticalThickness / 100,
-      jerkG: jerkG(),
-    }).peakG
+    })
+    return { result, maxImpactSpeed: undefined, minJerk: undefined, peakG: computedPeakG }
   })
 
   const getProfileShapeDescription = () => {
-    const type = result().profileType
+    const type = calc().result.profileType
     if (type === 'triangular') {
       return 'linear up, linear down (no constant phase)'
     }
@@ -155,17 +132,17 @@ export const AppUI: Component = () => {
               <h2 class="text-lg font-semibold">Acceleration profile</h2>
               <p class="text-xs text-gray-500">{getProfileShapeDescription()}</p>
             </div>
-            <AccelerationProfileChart samples={result().samples} />
+            <AccelerationProfileChart samples={calc().result.samples} />
           </section>
 
           {/* Full-width summary panel */}
           <SummaryPanel
             mode={mode()}
-            result={result()}
+            result={calc().result}
             compressionFactor={compressionFactor()}
-            maxImpactSpeed={maxImpactSpeedResult()}
-            minJerk={minJerkResult()}
-            peakG={peakGResult()}
+            maxImpactSpeed={calc().maxImpactSpeed}
+            minJerk={calc().minJerk}
+            peakG={calc().peakG}
           />
 
           <div class="grid gap-3 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start">
@@ -181,10 +158,10 @@ export const AppUI: Component = () => {
               onJerkGChange={setJerkG}
               onMaxGChange={setMaxG}
               onCompressionFactorChange={setCompressionFactor}
-              errorMessage={!result().ok ? result().reason : undefined}
+              errorMessage={!calc().result.ok ? calc().result.reason : undefined}
             />
 
-            <StatsPanel result={result()} />
+            <StatsPanel result={calc().result} />
           </div>
 
           {/* Eiband chart */}
@@ -195,7 +172,7 @@ export const AppUI: Component = () => {
                 Time spent at or above each G level (log-log scale)
               </p>
             </div>
-            <EibandChart peakG={result().peakG} t1={result().t1} t2={result().t2} />
+            <EibandChart peakG={calc().result.peakG} t1={calc().result.t1} t2={calc().result.t2} />
           </section>
         </div>
       </div>

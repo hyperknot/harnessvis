@@ -18,41 +18,26 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
     return calculateFoamThickness(props.result.stopDistance * 100, props.compressionFactor)
   }
 
+  const peakGLabel = () => {
+    // In peakG mode, result.maxG is a solved value, not a user cap.
+    if (props.mode === 'peakG') return 'Peak G experienced:'
+    return `Peak G (limit ${props.result.maxG.toFixed(0)} G):`
+  }
+
+  const peakGValue = () => {
+    // In peakG mode we show the dedicated computed value (same as result.peakG, but explicit).
+    if (props.mode === 'peakG') return props.peakG ?? 0
+    return props.result.peakG ?? 0
+  }
+
   return (
     <section class="bg-white rounded-lg shadow-sm border border-gray-200 py-2 px-3">
       <div class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-around gap-3 sm:gap-3">
-        {/* Peak G - shown differently based on mode */}
-        <Show when={props.mode !== 'peakG'}>
-          <div class="flex flex-col items-center min-w-0">
-            <span class="text-sm text-gray-600 text-center leading-tight">Peak G:</span>
-            <span
-              class="text-base md:text-xl font-bold"
-              classList={{
-                'text-red-600': props.result.gLimitReached,
-              }}
-            >
-              {props.result.peakG ? `${props.result.peakG.toFixed(2)} G` : '—'}
-            </span>
-          </div>
-        </Show>
-
-        {/* Mode: peakG - show calculated peak G as main output */}
-        <Show when={props.mode === 'peakG'}>
-          <div class="flex flex-col items-center min-w-0">
-            <span class="text-sm text-gray-600 text-center leading-tight break-words max-w-full">
-              Peak G experienced:
-            </span>
-            <span class="text-base md:text-xl font-bold text-emerald-600">
-              {props.peakG ? `${props.peakG.toFixed(2)} G` : '—'}
-            </span>
-          </div>
-        </Show>
-
-        {/* Mode: thickness - show thickness outputs */}
+        {/* Mode: thickness */}
         <Show when={props.mode === 'thickness'}>
           <div class="flex flex-col items-center min-w-0">
             <span class="text-sm text-gray-600 text-center leading-tight break-words max-w-full">
-              Min theoretical thickness:
+              Required compression distance:
             </span>
             <span class="text-base md:text-xl font-bold text-blue-600">
               {props.result.stopDistance
@@ -63,15 +48,30 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
 
           <div class="flex flex-col items-center min-w-0">
             <span class="text-sm text-gray-600 text-center leading-tight break-words max-w-full">
-              Min foam thickness:
+              Required foam thickness:
             </span>
             <span class="text-base md:text-xl font-bold text-emerald-600">
               {props.result.stopDistance ? `${foamThickness().toFixed(2)} cm` : '—'}
             </span>
           </div>
+
+          <div class="flex flex-col items-center min-w-0">
+            <span class="text-sm text-gray-600 text-center leading-tight break-words max-w-full">
+              {peakGLabel()}
+            </span>
+            <span
+              class="text-base md:text-xl font-bold"
+              classList={{
+                'text-red-600': props.result.gLimitReached,
+                'text-gray-900': !props.result.gLimitReached,
+              }}
+            >
+              {props.result.peakG ? `${props.result.peakG.toFixed(2)} G` : '—'}
+            </span>
+          </div>
         </Show>
 
-        {/* Mode: speed - show speed output */}
+        {/* Mode: speed */}
         <Show when={props.mode === 'speed'}>
           <div class="flex flex-col items-center min-w-0">
             <span class="text-sm text-gray-600 text-center leading-tight break-words max-w-full">
@@ -84,7 +84,22 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
 
           <div class="flex flex-col items-center min-w-0">
             <span class="text-sm text-gray-600 text-center leading-tight break-words max-w-full">
-              Compression distance:
+              {peakGLabel()}
+            </span>
+            <span
+              class="text-base md:text-xl font-bold"
+              classList={{
+                'text-red-600': props.result.gLimitReached,
+                'text-gray-900': !props.result.gLimitReached,
+              }}
+            >
+              {props.result.peakG ? `${props.result.peakG.toFixed(2)} G` : '—'}
+            </span>
+          </div>
+
+          <div class="flex flex-col items-center min-w-0">
+            <span class="text-sm text-gray-600 text-center leading-tight break-words max-w-full">
+              Available compression distance:
             </span>
             <span class="text-base md:text-xl font-bold text-blue-600">
               {props.result.stopDistance
@@ -94,7 +109,7 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
           </div>
         </Show>
 
-        {/* Mode: jerk - show min jerk output */}
+        {/* Mode: jerk */}
         <Show when={props.mode === 'jerk'}>
           <div class="flex flex-col items-center min-w-0">
             <span class="text-sm text-gray-600 text-center leading-tight break-words max-w-full">
@@ -107,7 +122,22 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
 
           <div class="flex flex-col items-center min-w-0">
             <span class="text-sm text-gray-600 text-center leading-tight break-words max-w-full">
-              Compression distance:
+              {peakGLabel()}
+            </span>
+            <span
+              class="text-base md:text-xl font-bold"
+              classList={{
+                'text-red-600': props.result.gLimitReached,
+                'text-gray-900': !props.result.gLimitReached,
+              }}
+            >
+              {props.result.peakG ? `${props.result.peakG.toFixed(2)} G` : '—'}
+            </span>
+          </div>
+
+          <div class="flex flex-col items-center min-w-0">
+            <span class="text-sm text-gray-600 text-center leading-tight break-words max-w-full">
+              Available compression distance:
             </span>
             <span class="text-base md:text-xl font-bold text-blue-600">
               {props.result.stopDistance
@@ -117,20 +147,20 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
           </div>
         </Show>
 
-        {/* Mode: peakG - show additional info */}
+        {/* Mode: peakG */}
         <Show when={props.mode === 'peakG'}>
           <div class="flex flex-col items-center min-w-0">
             <span class="text-sm text-gray-600 text-center leading-tight break-words max-w-full">
-              Profile type:
+              {peakGLabel()}
             </span>
-            <span class="text-base md:text-xl font-bold text-blue-600">
-              {props.result.profileType ?? '—'}
+            <span class="text-base md:text-xl font-bold text-emerald-600">
+              {props.peakG ? `${props.peakG.toFixed(2)} G` : '—'}
             </span>
           </div>
 
           <div class="flex flex-col items-center min-w-0">
             <span class="text-sm text-gray-600 text-center leading-tight break-words max-w-full">
-              Compression distance:
+              Available compression distance:
             </span>
             <span class="text-base md:text-xl font-bold text-blue-600">
               {props.result.stopDistance

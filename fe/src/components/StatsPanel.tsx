@@ -21,11 +21,6 @@ export const StatsPanel: Component<StatsPanelProps> = (props) => {
 
       <div class="grid gap-3 text-sm">
         <div class="flex justify-between">
-          <span class="text-gray-600">Max G limit reached?</span>
-          <span class="font-semibold">{props.result.gLimitReached ? 'Yes' : 'No'}</span>
-        </div>
-
-        <div class="flex justify-between">
           <span class="text-gray-600">Time to peak G (each side):</span>
           <span class="font-semibold">
             {props.result.t1 ? (props.result.t1 * 1000).toFixed(2) : '—'} ms
@@ -78,18 +73,6 @@ export const StatsPanel: Component<StatsPanelProps> = (props) => {
             ⚠️ Over proposed EN limits (38 G for ≥7 ms or 20 G for ≥25 ms)
           </div>
         )}
-
-        {/* Head Injury Criterion (HIC) */}
-        {/*<div class="py-2 border-t border-gray-200 mt-2 space-y-2">*/}
-        {/*  <div class="flex justify-between">*/}
-        {/*    <span class="text-gray-600">HIC15:</span>*/}
-        {/*    <span class="font-semibold">{props.result.hic15.toFixed(0)}</span>*/}
-        {/*  </div>*/}
-        {/*  <div class="flex justify-between">*/}
-        {/*    <span class="text-gray-600">HIC36:</span>*/}
-        {/*    <span class="font-semibold">{props.result.hic36.toFixed(0)}</span>*/}
-        {/*  </div>*/}
-        {/*</div>*/}
       </div>
     </section>
   )

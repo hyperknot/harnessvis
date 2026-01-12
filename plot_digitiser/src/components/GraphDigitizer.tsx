@@ -331,8 +331,14 @@ function lineIntersection(
   p3: { x: number; y: number },
   p4: { x: number; y: number },
 ): { x: number; y: number } | null {
-  const x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y
-  const x3 = p3.x, y3 = p3.y, x4 = p4.x, y4 = p4.y
+  const x1 = p1.x
+  const y1 = p1.y
+  const x2 = p2.x
+  const y2 = p2.y
+  const x3 = p3.x
+  const y3 = p3.y
+  const x4 = p4.x
+  const y4 = p4.y
 
   const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
   if (Math.abs(denom) < 1e-12) return null // parallel lines
@@ -344,7 +350,6 @@ function lineIntersection(
     y: y1 + t * (y2 - y1),
   }
 }
-
 
 interface LineData {
   id: number
@@ -506,14 +511,20 @@ export const GraphDigitizer: Component = () => {
   // Computed axis fits
   const xAxisFit = createMemo(() => {
     const points = xAxisPoints()
-    console.log('[DEBUG] xAxisFit recalculating, points:', points.map(p => ({ id: p.id, value: p.value })))
+    console.log(
+      '[DEBUG] xAxisFit recalculating, points:',
+      points.map((p) => ({ id: p.id, value: p.value })),
+    )
     const fit = fitAxis(points, 'x')
     console.log('[DEBUG] xAxisFit result:', fit)
     return fit
   })
   const yAxisFit = createMemo(() => {
     const points = yAxisPoints()
-    console.log('[DEBUG] yAxisFit recalculating, points:', points.map(p => ({ id: p.id, value: p.value })))
+    console.log(
+      '[DEBUG] yAxisFit recalculating, points:',
+      points.map((p) => ({ id: p.id, value: p.value })),
+    )
     const fit = fitAxis(points, 'y')
     console.log('[DEBUG] yAxisFit result:', fit)
     return fit
@@ -837,8 +848,14 @@ export const GraphDigitizer: Component = () => {
     const updateFn = axis === 'x' ? setXAxisPoints : setYAxisPoints
     updateFn((prev) => {
       const newPoints = prev.map((p) => (p.id === id ? { ...p, value: num } : p))
-      console.log('[DEBUG] updating points, old:', prev.map(p => ({ id: p.id, value: p.value })))
-      console.log('[DEBUG] updating points, new:', newPoints.map(p => ({ id: p.id, value: p.value })))
+      console.log(
+        '[DEBUG] updating points, old:',
+        prev.map((p) => ({ id: p.id, value: p.value })),
+      )
+      console.log(
+        '[DEBUG] updating points, new:',
+        newPoints.map((p) => ({ id: p.id, value: p.value })),
+      )
       return newPoints
     })
   }
@@ -1342,7 +1359,14 @@ export const GraphDigitizer: Component = () => {
                     const pointError = () => {
                       const fit = xAxisFit()
                       const pt = currentPoint()
-                      console.log('[DEBUG] X pointError() called for id:', p.id, 'pt.value:', pt.value, 'fit:', fit ? 'exists' : 'null')
+                      console.log(
+                        '[DEBUG] X pointError() called for id:',
+                        p.id,
+                        'pt.value:',
+                        pt.value,
+                        'fit:',
+                        fit ? 'exists' : 'null',
+                      )
                       if (!fit || pt.value <= 0) return null
                       const err = calculatePointError(pt, fit)
                       console.log('[DEBUG] X pointError result:', err)
@@ -1418,7 +1442,14 @@ export const GraphDigitizer: Component = () => {
                     const pointError = () => {
                       const fit = yAxisFit()
                       const pt = currentPoint()
-                      console.log('[DEBUG] Y pointError() called for id:', p.id, 'pt.value:', pt.value, 'fit:', fit ? 'exists' : 'null')
+                      console.log(
+                        '[DEBUG] Y pointError() called for id:',
+                        p.id,
+                        'pt.value:',
+                        pt.value,
+                        'fit:',
+                        fit ? 'exists' : 'null',
+                      )
                       if (!fit || pt.value <= 0) return null
                       const err = calculatePointError(pt, fit)
                       console.log('[DEBUG] Y pointError result:', err)
@@ -1526,7 +1557,8 @@ export const GraphDigitizer: Component = () => {
                 <div class="bg-white rounded-lg shadow-sm border p-4 space-y-2">
                   <h3 class="font-semibold text-purple-600">Sequential Path Points</h3>
                   <p class="text-sm text-gray-600">
-                    {pathPoints().length} points: first point, {pathPoints().length - 2} intersections, last point
+                    {pathPoints().length} points: first point, {pathPoints().length - 2}{' '}
+                    intersections, last point
                   </p>
                   <textarea
                     class="w-full h-48 font-mono text-sm border rounded p-2"

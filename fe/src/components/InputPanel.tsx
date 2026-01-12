@@ -35,9 +35,6 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
   // Show max G input in: thickness, speed, jerk modes (not in peakG mode)
   const showMaxG = () => props.mode !== 'peakG'
 
-  // Show compression factor when foam thickness is relevant
-  const showCompression = () => props.mode !== 'thickness'
-
   return (
     <section class="bg-white rounded-xl shadow-sm border border-gray-200 py-2 px-3 space-y-4">
       <h2 class="text-lg font-semibold">Inputs</h2>
@@ -85,7 +82,7 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
           </label>
         </Show>
 
-        {/* Max Jerk - in thickness, speed modes */}
+        {/* Max Jerk - in thickness, speed, peakG modes */}
         <Show when={showJerk()}>
           <label class="flex flex-col gap-1">
             <span class="text-sm font-medium text-gray-700">Max jerk</span>
@@ -127,28 +124,25 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
           </label>
         </Show>
 
-        {/* Compression factor - when foam thickness is relevant */}
-        <Show when={showCompression()}>
-          <label class="flex flex-col gap-1">
-            <span class="text-sm font-medium text-gray-700">Max foam compression</span>
-            <div class="flex items-center gap-2">
-              <input
-                type="number"
-                inputmode="decimal"
-                min="1"
-                max="99"
-                step="1"
-                value={props.compressionFactor}
-                onInput={(e) => props.onCompressionFactorChange(parseNumberInput(e))}
-                class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <span class="text-sm text-gray-500 whitespace-nowrap">%</span>
-            </div>
-            <span class="text-xs text-gray-500">
-              How much foam can compress, before bottoming out
-            </span>
-          </label>
-        </Show>
+        <label class="flex flex-col gap-1">
+          <span class="text-sm font-medium text-gray-700">Max foam compression</span>
+          <div class="flex items-center gap-2">
+            <input
+              type="number"
+              inputmode="decimal"
+              min="1"
+              max="99"
+              step="1"
+              value={props.compressionFactor}
+              onInput={(e) => props.onCompressionFactorChange(parseNumberInput(e))}
+              class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <span class="text-sm text-gray-500 whitespace-nowrap">%</span>
+          </div>
+          <span class="text-xs text-gray-500">
+            Used to convert foam thickness ↔ available compression stroke (before bottoming out)
+          </span>
+        </label>
       </div>
 
       {props.errorMessage && (

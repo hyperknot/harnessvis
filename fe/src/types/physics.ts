@@ -38,9 +38,6 @@ export interface PhysicsResult {
   timeOver38G: number // time spent over 38G (s)
   timeOver20G: number // time spent over 20G (s)
 
-  hic15: number // Head Injury Criterion (15 ms window)
-  hic36: number // Head Injury Criterion (36 ms window)
-
   samples: Array<SamplePoint>
 }
 
