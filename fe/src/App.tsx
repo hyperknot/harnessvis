@@ -1,5 +1,5 @@
 import type { Component } from 'solid-js'
-import { createMemo, createSignal } from 'solid-js'
+import { createEffect, createMemo, createSignal, onMount } from 'solid-js'
 import { AccelerationProfileChart } from './components/AccelerationProfileChart'
 import { EibandChart } from './components/EibandChart'
 import { InputPanel } from './components/InputPanel'
@@ -15,20 +15,114 @@ import {
 } from './lib/physics'
 import type { CalculationMode } from './types/physics'
 
+// URL hash state management
+const DEFAULTS = {
+  mode: 'thickness' as CalculationMode,
+  impactSpeed: 5.7,
+  foamThickness: 15,
+  jerkG: 1300,
+  maxG: 42,
+  compressionFactor: 75,
+}
+
+interface AppState {
+  mode: CalculationMode
+  impactSpeed: number
+  foamThickness: number
+  jerkG: number
+  maxG: number
+  compressionFactor: number
+}
+
+function parseHash(): Partial<AppState> {
+  const hash = window.location.hash.slice(1)
+  if (!hash) return {}
+
+  const params = new URLSearchParams(hash)
+  const state: Partial<AppState> = {}
+
+  const modeParam = params.get('m')
+  if (modeParam && ['thickness', 'speed', 'jerk', 'peakG'].includes(modeParam)) {
+    state.mode = modeParam as CalculationMode
+  }
+
+  const v = params.get('v')
+  if (v) state.impactSpeed = Number.parseFloat(v)
+
+  const t = params.get('t')
+  if (t) state.foamThickness = Number.parseFloat(t)
+
+  const j = params.get('j')
+  if (j) state.jerkG = Number.parseFloat(j)
+
+  const g = params.get('g')
+  if (g) state.maxG = Number.parseFloat(g)
+
+  const c = params.get('c')
+  if (c) state.compressionFactor = Number.parseFloat(c)
+
+  return state
+}
+
+function buildHash(state: AppState): string {
+  const params = new URLSearchParams()
+
+  if (state.mode !== DEFAULTS.mode) params.set('m', state.mode)
+  if (state.impactSpeed !== DEFAULTS.impactSpeed) params.set('v', String(state.impactSpeed))
+  if (state.foamThickness !== DEFAULTS.foamThickness) params.set('t', String(state.foamThickness))
+  if (state.jerkG !== DEFAULTS.jerkG) params.set('j', String(state.jerkG))
+  if (state.maxG !== DEFAULTS.maxG) params.set('g', String(state.maxG))
+  if (state.compressionFactor !== DEFAULTS.compressionFactor) params.set('c', String(state.compressionFactor))
+
+  const str = params.toString()
+  return str ? `#${str}` : ''
+}
+
 export const AppUI: Component = () => {
+  const initialState = parseHash()
+
   // Mode selection
-  const [mode, setMode] = createSignal<CalculationMode>('thickness')
+  const [mode, setMode] = createSignal<CalculationMode>(initialState.mode ?? DEFAULTS.mode)
 
   // Mode 1 (thickness) inputs
-  const [impactSpeed, setImpactSpeed] = createSignal(5.7) // m/s
+  const [impactSpeed, setImpactSpeed] = createSignal(initialState.impactSpeed ?? DEFAULTS.impactSpeed)
 
   // Mode 2 (speed) inputs
-  const [foamThickness, setFoamThickness] = createSignal(15) // cm
+  const [foamThickness, setFoamThickness] = createSignal(initialState.foamThickness ?? DEFAULTS.foamThickness)
 
   // Common inputs
-  const [jerkG, setJerkG] = createSignal(1300) // G/s
-  const [maxG, setMaxG] = createSignal(42) // G
-  const [compressionFactor, setCompressionFactor] = createSignal(75) // %
+  const [jerkG, setJerkG] = createSignal(initialState.jerkG ?? DEFAULTS.jerkG)
+  const [maxG, setMaxG] = createSignal(initialState.maxG ?? DEFAULTS.maxG)
+  const [compressionFactor, setCompressionFactor] = createSignal(
+    initialState.compressionFactor ?? DEFAULTS.compressionFactor
+  )
+
+  // Sync state to URL hash
+  createEffect(() => {
+    const hash = buildHash({
+      mode: mode(),
+      impactSpeed: impactSpeed(),
+      foamThickness: foamThickness(),
+      jerkG: jerkG(),
+      maxG: maxG(),
+      compressionFactor: compressionFactor(),
+    })
+    window.history.replaceState(null, '', hash || window.location.pathname)
+  })
+
+  // Handle browser back/forward navigation
+  onMount(() => {
+    const handleHashChange = () => {
+      const newState = parseHash()
+      if (newState.mode !== undefined) setMode(newState.mode)
+      if (newState.impactSpeed !== undefined) setImpactSpeed(newState.impactSpeed)
+      if (newState.foamThickness !== undefined) setFoamThickness(newState.foamThickness)
+      if (newState.jerkG !== undefined) setJerkG(newState.jerkG)
+      if (newState.maxG !== undefined) setMaxG(newState.maxG)
+      if (newState.compressionFactor !== undefined) setCompressionFactor(newState.compressionFactor)
+    }
+    window.addEventListener('hashchange', handleHashChange)
+  })
 
   const calc = createMemo(() => {
     const availableStrokeCm = calculateTheoreticalThickness(foamThickness(), compressionFactor())
