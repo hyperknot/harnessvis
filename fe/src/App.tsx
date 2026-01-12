@@ -31,11 +31,8 @@ export const AppUI: Component = () => {
   const [compressionFactor, setCompressionFactor] = createSignal(75) // %
 
   const calc = createMemo(() => {
-    const theoreticalThicknessCm = calculateTheoreticalThickness(
-      foamThickness(),
-      compressionFactor(),
-    )
-    const targetStopDistance = theoreticalThicknessCm / 100 // cm -> m
+    const availableStrokeCm = calculateTheoreticalThickness(foamThickness(), compressionFactor())
+    const availableStrokeM = availableStrokeCm / 100 // cm -> m
 
     if (mode() === 'thickness') {
       const thicknessResult = computeProfile({
@@ -45,6 +42,7 @@ export const AppUI: Component = () => {
       })
       return {
         result: thicknessResult,
+        availableStrokeCm,
         maxImpactSpeed: undefined,
         minJerk: undefined,
         peakG: undefined,
@@ -53,28 +51,46 @@ export const AppUI: Component = () => {
 
     if (mode() === 'speed') {
       const { maxImpactSpeed, result: speedResult } = computeMaxImpactSpeed({
-        targetStopDistance,
+        targetStroke: availableStrokeM,
         jerkG: jerkG(),
         maxG: maxG(),
       })
-      return { result: speedResult, maxImpactSpeed, minJerk: undefined, peakG: undefined }
+      return {
+        result: speedResult,
+        availableStrokeCm,
+        maxImpactSpeed,
+        minJerk: undefined,
+        peakG: undefined,
+      }
     }
 
     if (mode() === 'jerk') {
       const { minJerk, result: jerkResult } = computeMinJerk({
         v0: impactSpeed(),
-        targetStopDistance,
+        targetStroke: availableStrokeM,
         maxG: maxG(),
       })
-      return { result: jerkResult, maxImpactSpeed: undefined, minJerk, peakG: undefined }
+      return {
+        result: jerkResult,
+        availableStrokeCm,
+        maxImpactSpeed: undefined,
+        minJerk,
+        peakG: undefined,
+      }
     }
 
     const { peakG: computedPeakG, result } = computePeakG({
       v0: impactSpeed(),
-      targetStopDistance,
+      targetStroke: availableStrokeM,
       jerkG: jerkG(),
     })
-    return { result, maxImpactSpeed: undefined, minJerk: undefined, peakG: computedPeakG }
+    return {
+      result,
+      availableStrokeCm,
+      maxImpactSpeed: undefined,
+      minJerk: undefined,
+      peakG: computedPeakG,
+    }
   })
 
   const getProfileShapeDescription = () => {
@@ -121,12 +137,9 @@ export const AppUI: Component = () => {
           </p>
         </header>
 
-        {/* Mode selector */}
         <ModeSelector mode={mode()} onModeChange={setMode} />
 
-        {/* Content layout */}
         <div class="space-y-3">
-          {/* Full-width chart on top */}
           <section class="bg-white rounded-xl shadow-sm border border-gray-200 py-2 px-3 space-y-3">
             <div>
               <h2 class="text-lg font-semibold">Acceleration profile</h2>
@@ -135,11 +148,11 @@ export const AppUI: Component = () => {
             <AccelerationProfileChart samples={calc().result.samples} />
           </section>
 
-          {/* Full-width summary panel */}
           <SummaryPanel
             mode={mode()}
             result={calc().result}
             compressionFactor={compressionFactor()}
+            availableStrokeCm={calc().availableStrokeCm}
             maxImpactSpeed={calc().maxImpactSpeed}
             minJerk={calc().minJerk}
             peakG={calc().peakG}
@@ -164,7 +177,6 @@ export const AppUI: Component = () => {
             <StatsPanel result={calc().result} />
           </div>
 
-          {/* Eiband chart */}
           <section class="bg-white rounded-xl shadow-sm border border-gray-200 py-2 px-3 space-y-3">
             <div>
               <h2 class="text-lg font-semibold">Eiband tolerance chart</h2>

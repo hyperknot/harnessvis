@@ -18,6 +18,16 @@ const EPSILON = 1e-12
 const SAMPLE_COUNT = 300
 
 /**
+ * Large maxG used to approximate "no peak-G cap" (triangular jerk-limited optimum).
+ */
+const VERY_LARGE_MAX_G = 1e9
+
+/**
+ * Large jerk used to approximate "instantaneous ramp" (maxG-only optimum).
+ */
+const VERY_LARGE_JERK_G = 1e9
+
+/**
  * Compute a 3‑phase, jerk‑limited deceleration profile:
  *  - ramp up with +jerk (0 → peakG)
  *  - optional plateau at peakG
@@ -27,6 +37,9 @@ const SAMPLE_COUNT = 300
  *  - impact speed (v0)
  *  - jerk limit (jerkG, in G/s)
  *  - peak G limit (maxG)
+ *
+ * Output:
+ *  - stopDistance: the required stopping displacement, i.e. required compression stroke (m).
  */
 export function computeProfile(input: PhysicsInput): PhysicsResult {
   // Clamp inputs to non‑negative values
@@ -162,19 +175,19 @@ export function computeProfile(input: PhysicsInput): PhysicsResult {
 
 /**
  * Compute the maximum impact speed that can be safely absorbed
- * given a target stop distance (theoretical thickness), jerk limit, and max G.
+ * given an available compression stroke, jerk limit, and max G.
  *
- * Uses binary search to find the v0 that produces the target stopDistance.
+ * Uses binary search to find the v0 that produces the target stroke.
  */
 export function computeMaxImpactSpeed(params: {
-  targetStopDistance: number // meters
+  targetStroke: number // meters
   jerkG: number
   maxG: number
 }): InverseResult {
-  const { targetStopDistance, jerkG, maxG } = params
+  const { targetStroke, jerkG, maxG } = params
 
   // Edge cases
-  if (targetStopDistance <= 0 || jerkG <= 0 || maxG <= 0) {
+  if (targetStroke <= 0 || jerkG <= 0 || maxG <= 0) {
     return {
       maxImpactSpeed: 0,
       result: computeProfile({ v0: 0.001, jerkG, maxG }),
@@ -183,17 +196,34 @@ export function computeMaxImpactSpeed(params: {
 
   // Binary search for v0
   let low = 0.001
-  let high = 100 // m/s - generous upper bound
+  let high = 1
 
-  // Expand upper bound if needed
-  let result = computeProfile({ v0: high, jerkG, maxG })
-  while (result.ok && result.stopDistance < targetStopDistance && high < 1000) {
+  // Ensure we bracket the solution: stopDistance(low) < target <= stopDistance(high)
+  let resultHigh = computeProfile({ v0: high, jerkG, maxG })
+  for (let i = 0; i < 60 && resultHigh.ok && resultHigh.stopDistance < targetStroke; i++) {
     high *= 2
-    result = computeProfile({ v0: high, jerkG, maxG })
+    resultHigh = computeProfile({ v0: high, jerkG, maxG })
+  }
+
+  if (!resultHigh.ok) {
+    return { maxImpactSpeed: 0, result: resultHigh }
+  }
+
+  if (resultHigh.stopDistance < targetStroke) {
+    return {
+      maxImpactSpeed: high,
+      result: {
+        ...resultHigh,
+        ok: false,
+        reason:
+          'Could not bracket a solution for impact speed (target stroke is too large for current bounds).',
+      },
+    }
   }
 
   // Binary search with sufficient iterations for precision
-  for (let i = 0; i < 100; i++) {
+  let result = resultHigh
+  for (let i = 0; i < 120; i++) {
     const mid = (low + high) / 2
     result = computeProfile({ v0: mid, jerkG, maxG })
 
@@ -202,11 +232,11 @@ export function computeMaxImpactSpeed(params: {
       continue
     }
 
-    if (Math.abs(result.stopDistance - targetStopDistance) < 1e-9) {
+    if (Math.abs(result.stopDistance - targetStroke) < 1e-9) {
       return { maxImpactSpeed: mid, result }
     }
 
-    if (result.stopDistance < targetStopDistance) {
+    if (result.stopDistance < targetStroke) {
       low = mid
     } else {
       high = mid
@@ -221,51 +251,94 @@ export function computeMaxImpactSpeed(params: {
 }
 
 /**
- * Compute the minimum jerk (G/s) required to stop within a given distance,
+ * Compute the minimum jerk (G/s) required to stop within a given compression stroke,
  * given impact speed and max G limit.
  *
- * Uses binary search to find the jerkG that produces the target stopDistance.
+ * Uses binary search to find the jerkG that produces the target stroke.
  */
 export function computeMinJerk(params: {
   v0: number // m/s
-  targetStopDistance: number // meters
+  targetStroke: number // meters
   maxG: number
 }): { minJerk: number; result: PhysicsResult } {
-  const { v0, targetStopDistance, maxG } = params
+  const { v0, targetStroke, maxG } = params
 
   // Edge cases
-  if (v0 <= 0 || targetStopDistance <= 0 || maxG <= 0) {
+  if (v0 <= 0 || targetStroke <= 0 || maxG <= 0) {
     return {
       minJerk: 0,
       result: computeProfile({ v0: 0.001, jerkG: 1, maxG }),
     }
   }
 
-  // Binary search for jerkG
-  // Higher jerk = faster ramp up = shorter stopping distance
-  // So we search for the minimum jerk that achieves target distance
-  let low = 1 // G/s - minimum reasonable jerk
-  let high = 100000 // G/s - generous upper bound
+  // Feasibility check:
+  // Even with "infinite jerk" (instant ramp), the best-case stop distance is limited by maxG.
+  const bestCase = computeProfile({ v0, jerkG: VERY_LARGE_JERK_G, maxG })
+  if (bestCase.ok && targetStroke < bestCase.stopDistance - 1e-9) {
+    return {
+      minJerk: 0,
+      result: {
+        ...bestCase,
+        ok: false,
+        reason:
+          `Impossible: available stroke (${(targetStroke * 100).toFixed(2)} cm) is less than the theoretical minimum ` +
+          `(${(bestCase.stopDistance * 100).toFixed(2)} cm) even with extremely high jerk, given maxG = ${maxG.toFixed(2)} G.`,
+      },
+    }
+  }
 
-  // Binary search with sufficient iterations for precision
-  for (let i = 0; i < 100; i++) {
+  // We search for the minimum jerk that achieves stopDistance <= targetStroke.
+  let low = 1 // G/s - minimum reasonable jerk
+  let high = 1
+
+  let resultHigh = computeProfile({ v0, jerkG: high, maxG })
+  // If already sufficient at low/high, return immediately.
+  if (resultHigh.ok && resultHigh.stopDistance <= targetStroke) {
+    return { minJerk: high, result: resultHigh }
+  }
+
+  // Increase high until it's sufficient (or we hit a very large ceiling)
+  for (let i = 0; i < 60 && resultHigh.ok && resultHigh.stopDistance > targetStroke; i++) {
+    high *= 2
+    resultHigh = computeProfile({ v0, jerkG: high, maxG })
+  }
+
+  if (!resultHigh.ok) {
+    return { minJerk: 0, result: resultHigh }
+  }
+
+  if (resultHigh.stopDistance > targetStroke) {
+    return {
+      minJerk: 0,
+      result: {
+        ...resultHigh,
+        ok: false,
+        reason:
+          'Could not bracket a solution for jerk (target stroke is too small for current bounds).',
+      },
+    }
+  }
+
+  // Binary search in [low, high]
+  let result = resultHigh
+  for (let i = 0; i < 120; i++) {
     const mid = (low + high) / 2
-    const result = computeProfile({ v0, jerkG: mid, maxG })
+    result = computeProfile({ v0, jerkG: mid, maxG })
 
     if (!result.ok) {
       low = mid
       continue
     }
 
-    if (Math.abs(result.stopDistance - targetStopDistance) < 1e-9) {
+    if (Math.abs(result.stopDistance - targetStroke) < 1e-9) {
       return { minJerk: mid, result }
     }
 
     // Higher jerk = shorter stop distance
-    if (result.stopDistance > targetStopDistance) {
-      low = mid // need more jerk to stop in less distance
+    if (result.stopDistance > targetStroke) {
+      low = mid
     } else {
-      high = mid // can use less jerk
+      high = mid
     }
   }
 
@@ -277,52 +350,80 @@ export function computeMinJerk(params: {
 }
 
 /**
- * Compute the peak G experienced when stopping within a given distance,
+ * Compute the peak G experienced when stopping within a given compression stroke,
  * given impact speed and jerk limit.
  *
- * This finds what maxG would be required/experienced to stop in the given distance.
- * Uses binary search to find the peak G that produces the target stopDistance.
+ * This finds what maxG would be required/experienced to stop in the given stroke.
+ * Uses binary search to find the peak G that produces the target stroke.
  */
 export function computePeakG(params: {
   v0: number // m/s
-  targetStopDistance: number // meters
+  targetStroke: number // meters
   jerkG: number
 }): { peakG: number; result: PhysicsResult } {
-  const { v0, targetStopDistance, jerkG } = params
+  const { v0, targetStroke, jerkG } = params
 
   // Edge cases
-  if (v0 <= 0 || targetStopDistance <= 0 || jerkG <= 0) {
+  if (v0 <= 0 || targetStroke <= 0 || jerkG <= 0) {
     return {
       peakG: 0,
       result: computeProfile({ v0: 0.001, jerkG, maxG: 1 }),
     }
   }
 
-  // Binary search for maxG
-  // Lower maxG limit = longer plateau needed = longer stop distance
-  // Higher maxG limit = can stop faster
-  let low = 0.1 // G - minimum
-  let high = 1000 // G - generous upper bound
+  // Feasibility check:
+  // With finite jerk, there is a *minimum* stopping distance even if maxG is unlimited.
+  const minDistanceProfile = computeProfile({ v0, jerkG, maxG: VERY_LARGE_MAX_G })
+  if (minDistanceProfile.ok && targetStroke < minDistanceProfile.stopDistance - 1e-9) {
+    return {
+      peakG: 0,
+      result: {
+        ...minDistanceProfile,
+        ok: false,
+        reason:
+          `Impossible: available stroke (${(targetStroke * 100).toFixed(2)} cm) is less than the minimum required ` +
+          `(${(minDistanceProfile.stopDistance * 100).toFixed(2)} cm) for v0 = ${v0.toFixed(2)} m/s with jerk limit = ${jerkG.toFixed(0)} G/s. ` +
+          'Increase foam stroke (thickness/compression) or allow higher jerk.',
+      },
+    }
+  }
 
-  // Binary search with sufficient iterations for precision
-  for (let i = 0; i < 100; i++) {
+  // Bracket: low maxG => large stop distance, high maxG => smallest stop distance (triangular limit).
+  let low = 0.001
+  let high = VERY_LARGE_MAX_G
+
+  // If targetStroke is extremely large, low might still not give enough distance; expand downwards.
+  let resultLow = computeProfile({ v0, jerkG, maxG: low })
+  for (let i = 0; i < 40 && resultLow.ok && resultLow.stopDistance < targetStroke; i++) {
+    low /= 2
+    if (low < 1e-12) break
+    resultLow = computeProfile({ v0, jerkG, maxG: low })
+  }
+
+  if (!resultLow.ok) {
+    return { peakG: 0, result: resultLow }
+  }
+
+  // Now binary search for maxG that yields the target stroke.
+  let result = minDistanceProfile
+  for (let i = 0; i < 120; i++) {
     const mid = (low + high) / 2
-    const result = computeProfile({ v0, jerkG, maxG: mid })
+    result = computeProfile({ v0, jerkG, maxG: mid })
 
     if (!result.ok) {
       low = mid
       continue
     }
 
-    if (Math.abs(result.stopDistance - targetStopDistance) < 1e-9) {
+    if (Math.abs(result.stopDistance - targetStroke) < 1e-9) {
       return { peakG: result.peakG, result }
     }
 
-    // Higher maxG = shorter stop distance
-    if (result.stopDistance > targetStopDistance) {
-      low = mid // need higher G to stop in less distance
+    // Higher maxG = shorter stop distance (until the jerk-limited triangular minimum is reached).
+    if (result.stopDistance > targetStroke) {
+      low = mid
     } else {
-      high = mid // can use lower G
+      high = mid
     }
   }
 
@@ -405,21 +506,6 @@ function buildSamples(params: {
 
 /**
  * Calculate exact time spent over a given G threshold using analytical formulas.
- *
- * For a jerk-limited profile with three phases:
- * - Phase 1 (0 → t₁): linear ramp-up, a(t) = j·t
- * - Phase 2 (t₁ → t₁+t₂): constant acceleration (plateau) if present, a(t) = A_peak
- * - Phase 3 (t₁+t₂ → 2t₁+t₂): linear ramp-down, a(t) = A_peak - j·(t - t₁ - t₂)
- *
- * The time over threshold is the interval [t_enter, t_exit] where:
- * - t_enter: when acceleration reaches threshold during ramp-up
- * - t_exit: when acceleration drops below threshold during ramp-down
- *
- * Derivation:
- * - Phase 1: a(t) = j·t = A_threshold → t_enter = A_threshold / j
- * - Phase 3: a(τ) = A_peak - j·τ = A_threshold → τ_exit = (A_peak - A_threshold) / j
- * - Convert to absolute time: t_exit = t₁ + t₂ + τ_exit
- * - Time over threshold: t_exit - t_enter
  */
 function calculateExactTimeOverThreshold(
   thresholdG: number,
@@ -438,26 +524,13 @@ function calculateExactTimeOverThreshold(
 
   const thresholdA = thresholdG * g // threshold in m/s^2
 
-  // Find when acceleration reaches threshold during ramp-up (phase 1)
-  // Phase 1: a(t) = j·t, solve for a(t) = thresholdA
   const t_enter = thresholdA / jerk
-
-  // Find when acceleration drops below threshold during ramp-down (phase 3)
-  // Phase 3: a(τ) = peakA - j·τ, solve for a(τ) = thresholdA
-  // where τ is time since start of phase 3
   const tau_exit = (peakA - thresholdA) / jerk
-
-  // Convert to absolute time
   const t_exit = t1 + t2 + tau_exit
 
-  // Total time over threshold
   return t_exit - t_enter
 }
 
-/**
- * Calculate exact time spent over 38G and 20G thresholds using analytical formulas
- * instead of sample-based approximations.
- */
 function calculateExactTimeOverThresholds(
   peakA: number,
   jerk: number,
@@ -473,28 +546,18 @@ function calculateExactTimeOverThresholds(
 
 /**
  * Calculate required uncompressed foam thickness based on max compression percentage.
- *
- * Example: Need 10 cm compression, foam compresses 70%
- *   → Required thickness = 10 / 0.70 = 14.29 cm
- *   → When compressed 70%, goes from 14.29 to 4.29 cm (compressed 10 cm)
- *
- * @param minTheoreticalThickness - Required compression distance (cm)
- * @param compressionFactor - Max compression percentage (e.g., 70 means foam can compress to 30% of original)
  */
 export function calculateFoamThickness(
-  minTheoreticalThickness: number,
+  requiredStrokeCm: number,
   compressionFactor: number,
 ): number {
   if (compressionFactor <= 0) return 0
-  return minTheoreticalThickness / (compressionFactor / 100)
+  return requiredStrokeCm / (compressionFactor / 100)
 }
 
 /**
- * Calculate theoretical compression distance from foam thickness.
+ * Calculate available compression stroke from foam thickness.
  * Inverse of calculateFoamThickness.
- *
- * @param foamThickness - Uncompressed foam thickness (cm)
- * @param compressionFactor - Max compression percentage
  */
 export function calculateTheoreticalThickness(
   foamThickness: number,
