@@ -1,5 +1,5 @@
 import type { Component } from 'solid-js'
-import { createMemo, createSignal, For, onCleanup, onMount, Show } from 'solid-js'
+import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from 'solid-js'
 
 // Types
 interface PixelPoint {
@@ -345,39 +345,6 @@ function lineIntersection(
   }
 }
 
-// Check if two lines are parallel (cannot intersect)
-function areLinesParallel(
-  line1: { start: { x: number; y: number }; end: { x: number; y: number } },
-  line2: { start: { x: number; y: number }; end: { x: number; y: number } },
-): boolean {
-  const dx1 = line1.end.x - line1.start.x
-  const dy1 = line1.end.y - line1.start.y
-  const dx2 = line2.end.x - line2.start.x
-  const dy2 = line2.end.y - line2.start.y
-
-  // Cross product of direction vectors - if near zero, lines are parallel
-  const cross = dx1 * dy2 - dy1 * dx2
-  return Math.abs(cross) < 1e-10
-}
-
-// Calculate minimum distance between endpoints of two line segments
-function minEndpointDistance(
-  line1: { start: { x: number; y: number }; end: { x: number; y: number } },
-  line2: { start: { x: number; y: number }; end: { x: number; y: number } },
-): number {
-  const dist = (p1: { x: number; y: number }, p2: { x: number; y: number }) => {
-    const dx = p1.x - p2.x
-    const dy = p1.y - p2.y
-    return Math.sqrt(dx * dx + dy * dy)
-  }
-
-  return Math.min(
-    dist(line1.start, line2.start),
-    dist(line1.start, line2.end),
-    dist(line1.end, line2.start),
-    dist(line1.end, line2.end),
-  )
-}
 
 interface LineData {
   id: number
@@ -386,54 +353,58 @@ interface LineData {
   end: { x: number; y: number }
 }
 
-interface IntersectionResult {
-  lineIds: [number, number]
-  point: { x: number; y: number }
-}
+// Calculate sequential path through lines:
+// First point of line 1, intersection 1-2, intersection 2-3, ..., last point of last line
+function calculateSequentialPath(lines: Array<LineData>): Array<{ x: number; y: number }> {
+  if (lines.length === 0) return []
 
-// For each line, find the 2 closest non-parallel lines and calculate intersections
-function calculateLineIntersections(lines: Array<LineData>): Array<IntersectionResult> {
-  if (lines.length < 2) return []
+  const points: Array<{ x: number; y: number }> = []
 
-  const intersections: Array<IntersectionResult> = []
-  const seenPairs = new Set<string>()
+  // First point of the first line
+  points.push(lines[0].start)
 
-  for (const line of lines) {
-    // Find all non-parallel lines with their endpoint distances
-    const candidates: Array<{ other: LineData; distance: number }> = []
+  // Intersections between consecutive lines
+  for (let i = 0; i < lines.length - 1; i++) {
+    const line1 = lines[i]
+    const line2 = lines[i + 1]
+    const intersection = lineIntersection(line1.start, line1.end, line2.start, line2.end)
 
-    for (const other of lines) {
-      if (other.id === line.id) continue
-      if (areLinesParallel(line, other)) continue
-
-      const dist = minEndpointDistance(line, other)
-      candidates.push({ other, distance: dist })
+    // Check if intersection is reasonable (close to where the lines meet)
+    // Use midpoint between line1.end and line2.start as the expected meeting point
+    const midpoint = {
+      x: (line1.end.x + line2.start.x) / 2,
+      y: (line1.end.y + line2.start.y) / 2,
     }
 
-    // Sort by distance and take the 2 closest
-    candidates.sort((a, b) => a.distance - b.distance)
-    const closest2 = candidates.slice(0, 2)
+    if (intersection) {
+      // Check if intersection is within reasonable distance of the midpoint
+      const dx = intersection.x - midpoint.x
+      const dy = intersection.y - midpoint.y
+      const distToMidpoint = Math.sqrt(dx * dx + dy * dy)
 
-    // Calculate intersections with the 2 closest lines
-    for (const { other } of closest2) {
-      // Create a unique key for this pair (smaller id first)
-      const pairKey = line.id < other.id ? `${line.id}-${other.id}` : `${other.id}-${line.id}`
+      // Calculate the "gap" between line1.end and line2.start
+      const gapX = line2.start.x - line1.end.x
+      const gapY = line2.start.y - line1.end.y
+      const gapSize = Math.sqrt(gapX * gapX + gapY * gapY)
 
-      // Skip if we've already calculated this pair
-      if (seenPairs.has(pairKey)) continue
-      seenPairs.add(pairKey)
-
-      const intersection = lineIntersection(line.start, line.end, other.start, other.end)
-      if (intersection) {
-        intersections.push({
-          lineIds: [line.id, other.id],
-          point: intersection,
-        })
+      // If intersection is within 3x the gap size from midpoint, use it
+      // Otherwise fall back to midpoint (lines are nearly parallel)
+      const threshold = Math.max(gapSize * 3, 0.001)
+      if (distToMidpoint < threshold) {
+        points.push(intersection)
+      } else {
+        points.push(midpoint)
       }
+    } else {
+      // Lines are parallel, use midpoint
+      points.push(midpoint)
     }
   }
 
-  return intersections
+  // Last point of the last line
+  points.push(lines[lines.length - 1].end)
+
+  return points
 }
 
 // Format a number without scientific notation, with reasonable precision
@@ -519,9 +490,9 @@ export const GraphDigitizer: Component = () => {
   const [currentLinePoints, setCurrentLinePoints] = createSignal<Array<PixelPoint>>([])
   const [nextLineId, setNextLineId] = createSignal(1)
 
-  // Intersections state (generated on demand)
-  const [intersections, setIntersections] = createSignal<Array<IntersectionResult>>([])
-  const [intersectionPixels, setIntersectionPixels] = createSignal<Array<PixelPoint>>([]) // For drawing on canvas
+  // Sequential path points (generated on demand)
+  const [pathPoints, setPathPoints] = createSignal<Array<{ x: number; y: number }>>([])
+  const [pathPixels, setPathPixels] = createSignal<Array<PixelPoint>>([]) // For drawing on canvas
 
   // Refs
   let canvasRef: HTMLCanvasElement | undefined
@@ -582,20 +553,20 @@ export const GraphDigitizer: Component = () => {
       }))
   })
 
-  // Calculate intersections from lines
-  const calculateIntersections = () => {
+  // Calculate sequential path through lines
+  const calculatePath = () => {
     const data = exportData()
-    if (data.length < 2) {
-      setIntersections([])
-      setIntersectionPixels([])
+    if (data.length === 0) {
+      setPathPoints([])
+      setPathPixels([])
       return
     }
 
     const xFit = xAxisFit()
     const yFit = yAxisFit()
     if (!xFit || !yFit) {
-      setIntersections([])
-      setIntersectionPixels([])
+      setPathPoints([])
+      setPathPixels([])
       return
     }
 
@@ -608,16 +579,16 @@ export const GraphDigitizer: Component = () => {
         end: d.end as { x: number; y: number },
       }))
 
-    const results = calculateLineIntersections(linesWithCoords)
-    setIntersections(results)
+    const points = calculateSequentialPath(linesWithCoords)
+    setPathPoints(points)
 
     // Convert to pixel coordinates for drawing
     const pixels: Array<PixelPoint> = []
-    for (const r of results) {
-      const pixel = realToPixel(r.point, xFit, yFit)
+    for (const p of points) {
+      const pixel = realToPixel(p, xFit, yFit)
       if (pixel) pixels.push(pixel)
     }
-    setIntersectionPixels(pixels)
+    setPathPixels(pixels)
   }
 
   // Handle image file input
@@ -976,8 +947,8 @@ export const GraphDigitizer: Component = () => {
     setCurrentLinePoints([])
     setActivePointId(null)
     setInputStrings(new Map())
-    setIntersections([])
-    setIntersectionPixels([])
+    setPathPoints([])
+    setPathPixels([])
     setMode('idle')
   }
 
@@ -1117,13 +1088,13 @@ export const GraphDigitizer: Component = () => {
       }
     }
 
-    // Draw intersection points if calculated
-    const intPixels = intersectionPixels()
-    if (intPixels.length > 0) {
+    // Draw path points if calculated
+    const pPixels = pathPixels()
+    if (pPixels.length > 0) {
       ctx.fillStyle = '#a855f7' // purple-500
       ctx.strokeStyle = '#fff'
       ctx.lineWidth = 2
-      for (const p of intPixels) {
+      for (const p of pPixels) {
         ctx.beginPath()
         ctx.arc(p.x, p.y, 10, 0, Math.PI * 2)
         ctx.fill()
@@ -1133,14 +1104,14 @@ export const GraphDigitizer: Component = () => {
   }
 
   // Re-render on state changes
-  createMemo(() => {
+  createEffect(() => {
     imageLoaded()
     xAxisPoints()
     yAxisPoints()
     lines()
     currentLinePoints()
     activePointId()
-    intersectionPixels()
+    pathPixels()
     renderCanvas()
   })
 
@@ -1258,10 +1229,10 @@ export const GraphDigitizer: Component = () => {
               <span class="text-gray-300">|</span>
               <button
                 class="px-4 py-2 rounded border bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={calculateIntersections}
-                disabled={exportData().length < 2}
+                onClick={calculatePath}
+                disabled={exportData().length === 0}
               >
-                Calculate Intersections
+                Calculate Path
               </button>
             </div>
 
@@ -1547,15 +1518,15 @@ export const GraphDigitizer: Component = () => {
             </div>
           </Show>
 
-          {/* Intersections Export */}
-          <Show when={intersections().length > 0}>
+          {/* Path Points Export */}
+          <Show when={pathPoints().length > 0}>
             {(() => {
-              const points = () => intersections().map((i) => [i.point.x, i.point.y])
+              const points = () => pathPoints().map((p) => [p.x, p.y])
               return (
                 <div class="bg-white rounded-lg shadow-sm border p-4 space-y-2">
-                  <h3 class="font-semibold text-purple-600">Line Intersections</h3>
+                  <h3 class="font-semibold text-purple-600">Sequential Path Points</h3>
                   <p class="text-sm text-gray-600">
-                    Found {intersections().length} intersection points from {exportData().length} lines.
+                    {pathPoints().length} points: first point, {pathPoints().length - 2} intersections, last point
                   </p>
                   <textarea
                     class="w-full h-48 font-mono text-sm border rounded p-2"
@@ -1567,7 +1538,7 @@ export const GraphDigitizer: Component = () => {
                       class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
                       onClick={() => {
                         navigator.clipboard.writeText(JSON.stringify(points(), null, 2))
-                        alert('Intersections copied to clipboard!')
+                        alert('Path points copied to clipboard!')
                       }}
                     >
                       Copy to Clipboard
@@ -1575,8 +1546,8 @@ export const GraphDigitizer: Component = () => {
                     <button
                       class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
                       onClick={() => {
-                        setIntersections([])
-                        setIntersectionPixels([])
+                        setPathPoints([])
+                        setPathPixels([])
                       }}
                     >
                       Clear
