@@ -29,8 +29,8 @@ export const StatsPanel: Component<StatsPanelProps> = (props) => {
     seconds ? `${(seconds * 1000).toFixed(2)} ms` : fallback
 
   return (
-    <section class="p-4 space-y-4" classList={{ [props.class || '']: Boolean(props.class) }}>
-      <h2 class="text-lg font-semibold">Profile timing</h2>
+    <section class="px-4 py-2" classList={{ [props.class || '']: Boolean(props.class) }}>
+      <h2 class="text-lg font-semibold mb-2">Profile timing</h2>
 
       <div class="grid gap-2 text-sm">
         <StatRow label="Time to peak G:" value={formatMs(props.result.t1)} />

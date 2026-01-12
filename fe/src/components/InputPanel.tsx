@@ -61,10 +61,10 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
   const showMaxG = () => props.mode !== 'peakG'
 
   return (
-    <section class="p-4 space-y-4">
-      <h2 class="text-lg font-semibold">Inputs</h2>
+    <section class="px-4 py-2">
+      <h2 class="text-lg font-semibold mb-2">Inputs</h2>
 
-      <div class="grid gap-4 text-sm">
+      <div class="grid gap-3 text-sm">
         <Show when={showImpactSpeed()}>
           <NumberInput
             label="Impact speed"

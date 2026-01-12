@@ -108,34 +108,8 @@ export const AppUI: Component = () => {
     <div class="h-screen w-screen bg-white text-gray-900 overflow-hidden flex">
       {/* Left side - scrollable main content */}
       <div class="flex-1 h-full overflow-y-auto border-r border-black">
-        {/* About header */}
-        <header class="p-4 border-b border-black">
-          <h1 class="text-xl font-bold tracking-tight">
-            Paragliding Harness Back Protector Visualizer
-          </h1>
-          <p class="text-sm text-gray-600 mt-1">
-            <a
-              href="https://github.com/hyperknot/harnessvis"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="text-blue-600 hover:underline"
-            >
-              Open source
-            </a>
-            {' project by Zsolt Ero. '}
-            <a
-              href="https://github.com/hyperknot/harnessvis/blob/main/fe/src/lib/physics.ts"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="text-blue-600 hover:underline"
-            >
-              Physics
-            </a>
-          </p>
-        </header>
-
-        {/* Mode selector */}
-        <div class="border-b border-black">
+        {/* Mode selector - sticky at top */}
+        <div class="sticky top-0 z-10 bg-white border-b border-black">
           <ModeSelector mode={mode()} onModeChange={setMode} />
         </div>
 
@@ -160,6 +134,30 @@ export const AppUI: Component = () => {
 
       {/* Right side - scrollable sidebar */}
       <div class="w-80 h-full overflow-y-auto flex-shrink-0">
+        {/* About section */}
+        <div class="p-3 border-b border-black">
+          <h1 class="font-semibold">Paragliding Harness Back Protector Visualizer</h1>
+          <p class="text-xs text-gray-600 mt-0.5">
+            <a
+              href="https://github.com/hyperknot/harnessvis"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-blue-600 hover:underline"
+            >
+              Open source
+            </a>
+            {' project by Zsolt Ero. '}
+            <a
+              href="https://github.com/hyperknot/harnessvis/blob/main/fe/src/lib/physics.ts"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-blue-600 hover:underline"
+            >
+              Physics
+            </a>
+          </p>
+        </div>
+
         {/* Inputs */}
         <div class="border-b border-black">
           <InputPanel

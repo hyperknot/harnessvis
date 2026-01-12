@@ -43,7 +43,6 @@ export const ModeSelector: Component<ModeSelectorProps> = (props) => {
   return (
     <div class="p-4">
       <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-        <span class="text-sm font-medium text-gray-700 shrink-0">Calculate:</span>
         <div class="flex flex-wrap border border-neutral-900 w-full sm:w-auto">
           <For each={modeConfig}>
             {(config) => (

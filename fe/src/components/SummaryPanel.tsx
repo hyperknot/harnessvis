@@ -12,7 +12,7 @@ const StatRow: Component<{
   <div class="flex justify-between items-center">
     <span class="text-gray-600">{props.label}</span>
     <span
-      class="font-semibold text-lg"
+      class="font-semibold text-base"
       classList={{
         'text-blue-600': props.color === 'blue',
         'text-emerald-600': props.color === 'emerald',
@@ -62,8 +62,8 @@ export const SummaryPanel: Component<SummaryPanelProps> = (props) => {
   const peakGColor = (): 'red' | 'default' => (props.result.gLimitReached ? 'red' : 'default')
 
   return (
-    <section class="p-4">
-      <h2 class="text-lg font-semibold mb-3">Summary</h2>
+    <section class="px-4 py-2">
+      <h2 class="text-lg font-semibold mb-2">Summary</h2>
       <div class="flex flex-col gap-2 text-sm">
         <Show when={props.mode === 'thickness'}>
           <StatRow label="Compression stroke:" value={formatStroke()} color="blue" />
