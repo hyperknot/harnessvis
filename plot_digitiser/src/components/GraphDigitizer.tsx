@@ -31,7 +31,8 @@ interface AxisFit {
   dirX: number
   dirY: number
   rotation: number // radians from horizontal (for x) or vertical (for y)
-  origin: PixelPoint // reference point (first calibration point)
+  origin: PixelPoint // reference point on the fitted axis line
+  axisLength: number // total length of axis in pixels (for error normalization)
 }
 
 interface SaveState {
@@ -77,43 +78,79 @@ function linearRegression(
   return { slope, intercept }
 }
 
-// Fit axis from calibration points
+// Fit axis from calibration points using robust linear regression
+// For X-axis: Only horizontal (x) position matters - vertical scatter is ignored
+// For Y-axis: Only vertical (y) position matters - horizontal scatter is ignored
 function fitAxis(points: Array<CalibrationPoint>, axis: 'x' | 'y'): AxisFit | null {
   // Filter out points that haven't been assigned a positive value yet
   const validPoints = points.filter((p) => p.value > 0)
   if (validPoints.length < 2) return null
 
-  // Sort points by their pixel coordinate along the axis
-  const sorted = [...validPoints].sort((a, b) => (axis === 'x' ? a.x - b.x : b.y - a.y))
+  // Step 1: Fit a line through all points using linear regression
+  // This determines the axis direction robustly from ALL points
+  let dirX: number
+  let dirY: number
+  let originX: number
+  let originY: number
 
-  // Calculate direction vector from first to last point
-  const first = sorted[0]
-  const last = sorted[sorted.length - 1]
-  const dx = last.x - first.x
-  const dy = last.y - first.y
-  const len = Math.sqrt(dx * dx + dy * dy)
+  if (axis === 'x') {
+    // For X-axis: use pixel X as independent variable (only X position matters)
+    // Fit y = m*x + b
+    const xs = validPoints.map((p) => p.x)
+    const ys = validPoints.map((p) => p.y)
+    const { slope: m } = linearRegression(xs, ys)
 
-  if (len < 1) return null
+    // Direction vector: (1, m) normalized
+    const len = Math.sqrt(1 + m * m)
+    dirX = 1 / len
+    dirY = m / len
 
-  const dirX = dx / len
-  const dirY = dy / len
+    // Origin: point on fitted line at mean X
+    const meanX = xs.reduce((a, b) => a + b, 0) / xs.length
+    const meanY = ys.reduce((a, b) => a + b, 0) / ys.length
+    originX = meanX
+    originY = meanY // Use actual mean Y (point on least-squares line)
+  } else {
+    // For Y-axis: use pixel Y as independent variable (only Y position matters)
+    // Fit x = m*y + b
+    const xs = validPoints.map((p) => p.x)
+    const ys = validPoints.map((p) => p.y)
+    const { slope: m } = linearRegression(ys, xs) // Note: Y is independent, X is dependent
 
-  // Project each point onto the axis direction to get "distance along axis"
+    // Direction vector: (m, 1) normalized
+    const len = Math.sqrt(m * m + 1)
+    dirX = m / len
+    dirY = 1 / len
+
+    // Origin: point on fitted line at mean Y
+    const meanX = xs.reduce((a, b) => a + b, 0) / xs.length
+    const meanY = ys.reduce((a, b) => a + b, 0) / ys.length
+    originX = meanX
+    originY = meanY
+  }
+
+  // Step 2: Project each point onto the axis direction to get "distance along axis"
+  // The projection uses only the main dimension implicitly through the fitted line
   const projectedDistances: Array<number> = []
   const logValues: Array<number> = []
 
-  for (const p of sorted) {
-    // Distance along axis from first point
-    const dist = (p.x - first.x) * dirX + (p.y - first.y) * dirY
+  for (const p of validPoints) {
+    // Distance along axis from origin (projected position)
+    const dist = (p.x - originX) * dirX + (p.y - originY) * dirY
     projectedDistances.push(dist)
     logValues.push(Math.log10(p.value))
   }
 
-  // Linear regression: log10(value) = slope * distance + intercept
+  // Step 3: Linear regression for value mapping: log10(value) = slope * distance + intercept
   const { slope, intercept } = linearRegression(projectedDistances, logValues)
 
   // Calculate rotation angle
   const rotation = axis === 'x' ? Math.atan2(dirY, dirX) : Math.atan2(dirX, -dirY)
+
+  // Calculate axis length (span from min to max projected distance)
+  const minDist = Math.min(...projectedDistances)
+  const maxDist = Math.max(...projectedDistances)
+  const axisLength = maxDist - minDist
 
   return {
     slope,
@@ -121,7 +158,8 @@ function fitAxis(points: Array<CalibrationPoint>, axis: 'x' | 'y'): AxisFit | nu
     dirX,
     dirY,
     rotation,
-    origin: { x: first.x, y: first.y },
+    origin: { x: originX, y: originY },
+    axisLength,
   }
 }
 
@@ -285,9 +323,41 @@ function imageToDataUrl(img: HTMLImageElement): string | null {
   }
 }
 
-// Calculate error (perpendicular distance in pixels) for a calibration point
+// Format a number without scientific notation, with reasonable precision
+function formatNumber(n: number): string {
+  if (n === 0) return '0'
+
+  const absN = Math.abs(n)
+
+  // For very small numbers, show enough decimal places
+  if (absN < 0.0001) {
+    // Find how many decimal places we need
+    const decimalPlaces = Math.max(4, -Math.floor(Math.log10(absN)) + 3)
+    return n.toFixed(Math.min(decimalPlaces, 10))
+  }
+
+  // For small numbers (< 1), show 4 significant figures worth of decimals
+  if (absN < 1) {
+    const decimalPlaces = Math.max(4, -Math.floor(Math.log10(absN)) + 2)
+    return n.toFixed(Math.min(decimalPlaces, 8))
+  }
+
+  // For numbers >= 1, use up to 4 decimal places, trimming trailing zeros
+  if (absN < 10000) {
+    const formatted = n.toFixed(4)
+    // Remove trailing zeros after decimal point
+    return formatted.replace(/\.?0+$/, '')
+  }
+
+  // For large numbers, use no decimal places
+  return Math.round(n).toString()
+}
+
+// Calculate error as percentage of axis span for a calibration point
+// Returns the perpendicular distance from the point to the fitted axis line,
+// expressed as a percentage of the total axis length
 function calculatePointError(point: PixelPoint, fit: AxisFit | null): number {
-  if (!fit) return 0
+  if (!fit || fit.axisLength < 1) return 0
 
   // Vector from origin to point
   const dx = point.x - fit.origin.x
@@ -300,11 +370,13 @@ function calculatePointError(point: PixelPoint, fit: AxisFit | null): number {
   const closestX = fit.origin.x + dot * fit.dirX
   const closestY = fit.origin.y + dot * fit.dirY
 
-  // Perpendicular distance
+  // Perpendicular distance in pixels
   const distX = point.x - closestX
   const distY = point.y - closestY
+  const perpDistance = Math.sqrt(distX * distX + distY * distY)
 
-  return Math.sqrt(distX * distX + distY * distY)
+  // Return as percentage of axis span
+  return (perpDistance / fit.axisLength) * 100
 }
 
 export const GraphDigitizer: Component = () => {
@@ -1106,8 +1178,8 @@ export const GraphDigitizer: Component = () => {
                           onKeyDown={(e) => handleCalibrationKeyDown(e, index(), 'x', p.id)}
                         />
                         <Show when={p.value > 0 && xAxisFit()}>
-                          <span class="text-xs text-gray-400 w-12 text-right" title="Error in pixels">
-                            ±{error.toFixed(1)}px
+                          <span class="text-xs text-gray-400 w-14 text-right" title="Deviation from axis as % of axis span">
+                            ±{error.toFixed(2)}%
                           </span>
                         </Show>
                         <button
@@ -1161,8 +1233,8 @@ export const GraphDigitizer: Component = () => {
                           onKeyDown={(e) => handleCalibrationKeyDown(e, index(), 'y', p.id)}
                         />
                         <Show when={p.value > 0 && yAxisFit()}>
-                          <span class="text-xs text-gray-400 w-12 text-right" title="Error in pixels">
-                            ±{error.toFixed(1)}px
+                          <span class="text-xs text-gray-400 w-14 text-right" title="Deviation from axis as % of axis span">
+                            ±{error.toFixed(2)}%
                           </span>
                         </Show>
                         <button
@@ -1192,9 +1264,9 @@ export const GraphDigitizer: Component = () => {
                         <strong>#{line.id}</strong> ({line.type})
                         {line.startReal && line.endReal && (
                           <span class="ml-2 text-gray-600">
-                            ({line.startReal.x.toExponential(3)},{' '}
-                            {line.startReal.y.toExponential(3)}) → (
-                            {line.endReal.x.toExponential(3)}, {line.endReal.y.toExponential(3)})
+                            ({formatNumber(line.startReal.x)},{' '}
+                            {formatNumber(line.startReal.y)}) → (
+                            {formatNumber(line.endReal.x)}, {formatNumber(line.endReal.y)})
                           </span>
                         )}
                       </span>
