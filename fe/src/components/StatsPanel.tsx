@@ -14,14 +14,12 @@ export const StatsPanel: Component<StatsPanelProps> = (props) => {
   const isOverAnyLimit = () => isOver38GLimit() || isOver20GLimit()
 
   return (
-    <section
-      class={`bg-white rounded-xl shadow-sm border border-gray-200 py-2 px-3 space-y-4 ${props.class || ''}`}
-    >
-      <h2 class="text-lg font-semibold">Profile summary</h2>
+    <section class={`border border-black p-3 space-y-4 ${props.class || ''}`}>
+      <h2 class="text-lg font-semibold">Profile timing</h2>
 
-      <div class="grid gap-3 text-sm">
+      <div class="grid gap-2 text-sm">
         <div class="flex justify-between">
-          <span class="text-gray-600">Time to peak G (each side):</span>
+          <span class="text-gray-600">Time to peak G:</span>
           <span class="font-semibold">
             {props.result.t1 ? (props.result.t1 * 1000).toFixed(2) : '—'} ms
           </span>
@@ -41,8 +39,7 @@ export const StatsPanel: Component<StatsPanelProps> = (props) => {
           </span>
         </div>
 
-        {/* Time over thresholds - read-only measurements */}
-        <div class="py-2 border-t border-gray-200 mt-2 space-y-2">
+        <div class="pt-2 border-t border-black mt-2 space-y-2">
           <div class="flex justify-between">
             <span class="text-gray-600">Time over 38 G:</span>
             <span
@@ -67,10 +64,9 @@ export const StatsPanel: Component<StatsPanelProps> = (props) => {
           </div>
         </div>
 
-        {/* Warning message if over EN limits */}
         {isOverAnyLimit() && (
-          <div class="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-800">
-            ⚠️ Over proposed EN limits (38 G for ≥7 ms or 20 G for ≥25 ms)
+          <div class="border border-black bg-red-50 px-3 py-2 text-xs text-red-800">
+            Over proposed EN limits (38 G for 7 ms or 20 G for 25 ms)
           </div>
         )}
       </div>

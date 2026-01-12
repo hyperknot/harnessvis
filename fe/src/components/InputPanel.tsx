@@ -36,10 +36,10 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
   const showMaxG = () => props.mode !== 'peakG'
 
   return (
-    <section class="bg-white rounded-xl shadow-sm border border-gray-200 py-2 px-3 space-y-4">
+    <section class="border border-black p-3 space-y-4">
       <h2 class="text-lg font-semibold">Inputs</h2>
 
-      <div class="grid gap-4 sm:grid-cols-2">
+      <div class="grid gap-4">
         {/* Impact Speed - in thickness, jerk, peakG modes */}
         <Show when={showImpactSpeed()}>
           <label class="flex flex-col gap-1">
@@ -52,7 +52,7 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
                 step="0.1"
                 value={props.impactSpeed}
                 onInput={(e) => props.onImpactSpeedChange(parseNumberInput(e))}
-                class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full border border-black px-2 py-1.5 text-base focus:outline-none focus:ring-1 focus:ring-black"
               />
               <span class="text-sm text-gray-500 whitespace-nowrap">m/s</span>
             </div>
@@ -74,7 +74,7 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
                 step="0.5"
                 value={props.foamThickness}
                 onInput={(e) => props.onFoamThicknessChange(parseNumberInput(e))}
-                class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full border border-black px-2 py-1.5 text-base focus:outline-none focus:ring-1 focus:ring-black"
               />
               <span class="text-sm text-gray-500 whitespace-nowrap">cm</span>
             </div>
@@ -94,7 +94,7 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
                 step="50"
                 value={props.jerkG}
                 onInput={(e) => props.onJerkGChange(parseNumberInput(e))}
-                class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full border border-black px-2 py-1.5 text-base focus:outline-none focus:ring-1 focus:ring-black"
               />
               <span class="text-sm text-gray-500 whitespace-nowrap">G/s</span>
             </div>
@@ -116,7 +116,7 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
                 step="1"
                 value={props.maxG}
                 onInput={(e) => props.onMaxGChange(parseNumberInput(e))}
-                class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full border border-black px-2 py-1.5 text-base focus:outline-none focus:ring-1 focus:ring-black"
               />
               <span class="text-sm text-gray-500 whitespace-nowrap">G</span>
             </div>
@@ -135,7 +135,7 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
               step="1"
               value={props.compressionFactor}
               onInput={(e) => props.onCompressionFactorChange(parseNumberInput(e))}
-              class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full border border-black px-2 py-1.5 text-base focus:outline-none focus:ring-1 focus:ring-black"
             />
             <span class="text-sm text-gray-500 whitespace-nowrap">%</span>
           </div>
@@ -146,7 +146,7 @@ export const InputPanel: Component<InputPanelProps> = (props) => {
       </div>
 
       {props.errorMessage && (
-        <div class="mt-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        <div class="mt-2 border border-black bg-amber-50 px-3 py-2 text-xs text-amber-800">
           {props.errorMessage}
         </div>
       )}

@@ -105,42 +105,15 @@ export const AppUI: Component = () => {
   }
 
   return (
-    <div class="min-h-screen bg-slate-50 text-gray-900 overflow-x-hidden">
-      <div class="max-w-5xl mx-auto py-8 px-4 space-y-6">
-        <header class="space-y-2">
-          <h1 class="md:text-3xl text-xl font-bold tracking-tight">
-            Paragliding Harness Back Protector Visualizer
-          </h1>
-          <p class="text-gray-600">
-            Visualize jerk and G limited paragliding harness back protectors.
-          </p>
-          <p class="text-gray-600">
-            This is an{' '}
-            <a
-              href="https://github.com/hyperknot/harnessvis"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="text-blue-600 hover:underline"
-            >
-              open source
-            </a>{' '}
-            project by Zsolt Ero. Physics is in{' '}
-            <a
-              href="https://github.com/hyperknot/harnessvis/blob/main/fe/src/lib/physics.ts"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="text-blue-600 hover:underline"
-            >
-              this file
-            </a>
-            .
-          </p>
-        </header>
+    <div class="h-screen w-screen bg-white text-gray-900 overflow-hidden flex">
+      {/* Left side - scrollable main content */}
+      <div class="flex-1 h-full overflow-y-auto border-r border-black">
+        <div class="p-4 space-y-4">
+          {/* Mode selector at very top */}
+          <ModeSelector mode={mode()} onModeChange={setMode} />
 
-        <ModeSelector mode={mode()} onModeChange={setMode} />
-
-        <div class="space-y-3">
-          <section class="bg-white rounded-xl shadow-sm border border-gray-200 py-2 px-3 space-y-3">
+          {/* Acceleration profile section */}
+          <section class="border border-black p-3 space-y-3">
             <div>
               <h2 class="text-lg font-semibold">Acceleration profile</h2>
               <p class="text-xs text-gray-500">{getProfileShapeDescription()}</p>
@@ -148,6 +121,39 @@ export const AppUI: Component = () => {
             <AccelerationProfileChart samples={calc().result.samples} />
           </section>
 
+          {/* Eiband chart section - scroll down to see */}
+          <section class="border border-black p-3 space-y-3">
+            <div>
+              <h2 class="text-lg font-semibold">Eiband tolerance chart</h2>
+              <p class="text-xs text-gray-500">
+                Time spent at or above each G level (log-log scale)
+              </p>
+            </div>
+            <EibandChart peakG={calc().result.peakG} t1={calc().result.t1} t2={calc().result.t2} />
+          </section>
+        </div>
+      </div>
+
+      {/* Right side - fixed sidebar */}
+      <div class="w-80 h-full overflow-y-auto flex-shrink-0">
+        <div class="p-4 space-y-4">
+          {/* Inputs at top */}
+          <InputPanel
+            mode={mode()}
+            impactSpeed={impactSpeed()}
+            foamThickness={foamThickness()}
+            jerkG={jerkG()}
+            maxG={maxG()}
+            compressionFactor={compressionFactor()}
+            onImpactSpeedChange={setImpactSpeed}
+            onFoamThicknessChange={setFoamThickness}
+            onJerkGChange={setJerkG}
+            onMaxGChange={setMaxG}
+            onCompressionFactorChange={setCompressionFactor}
+            errorMessage={!calc().result.ok ? calc().result.reason : undefined}
+          />
+
+          {/* Profile summary below */}
           <SummaryPanel
             mode={mode()}
             result={calc().result}
@@ -158,34 +164,7 @@ export const AppUI: Component = () => {
             peakG={calc().peakG}
           />
 
-          <div class="grid gap-3 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start">
-            <InputPanel
-              mode={mode()}
-              impactSpeed={impactSpeed()}
-              foamThickness={foamThickness()}
-              jerkG={jerkG()}
-              maxG={maxG()}
-              compressionFactor={compressionFactor()}
-              onImpactSpeedChange={setImpactSpeed}
-              onFoamThicknessChange={setFoamThickness}
-              onJerkGChange={setJerkG}
-              onMaxGChange={setMaxG}
-              onCompressionFactorChange={setCompressionFactor}
-              errorMessage={!calc().result.ok ? calc().result.reason : undefined}
-            />
-
-            <StatsPanel result={calc().result} />
-          </div>
-
-          <section class="bg-white rounded-xl shadow-sm border border-gray-200 py-2 px-3 space-y-3">
-            <div>
-              <h2 class="text-lg font-semibold">Eiband tolerance chart</h2>
-              <p class="text-xs text-gray-500">
-                Time spent at or above each G level (log-log scale)
-              </p>
-            </div>
-            <EibandChart peakG={calc().result.peakG} t1={calc().result.t1} t2={calc().result.t2} />
-          </section>
+          <StatsPanel result={calc().result} />
         </div>
       </div>
     </div>
