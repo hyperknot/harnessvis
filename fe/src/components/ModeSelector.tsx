@@ -15,19 +15,18 @@ const modeConfig: Array<{
     mode: 'thickness',
     label: 'Min Thickness',
     description:
-      'Given impact speed, jerk limit and peak-G cap → compute required compression stroke and foam thickness.',
+      'Given impact speed, jerk limit and max G → compute required compression stroke and foam thickness.',
   },
   {
     mode: 'speed',
-    label: 'Max Speed',
-    description:
-      'Given foam thickness (and max compression), jerk limit and peak-G cap → compute max safe impact speed.',
+    label: 'Max Impact Speed',
+    description: 'Given foam thickness, jerk limit and max G → compute max safe impact speed.',
   },
   {
     mode: 'jerk',
     label: 'Min Jerk',
     description:
-      'Given impact speed, available compression stroke and peak-G cap → compute the minimum jerk limit required.',
+      'Given impact speed, available compression stroke and max G → compute the minimum jerk limit required.',
   },
   {
     mode: 'peakG',

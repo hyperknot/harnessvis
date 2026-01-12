@@ -18,7 +18,7 @@ const EPSILON = 1e-12
 const SAMPLE_COUNT = 300
 
 /**
- * Large maxG used to approximate "no peak-G cap" (triangular jerk-limited optimum).
+ * Large maxG used to approximate "no max G" (triangular jerk-limited optimum).
  */
 const VERY_LARGE_MAX_G = 1e9
 
