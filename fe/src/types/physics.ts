@@ -2,7 +2,7 @@ export const G_CONST = 9.81
 
 export type ProfileType = 'triangular' | 'trapezoidal'
 
-export type CalculationMode = 'thickness' | 'speed'
+export type CalculationMode = 'thickness' | 'speed' | 'jerk' | 'peakG'
 
 export interface PhysicsInput {
   v0: number // impact speed (m/s)

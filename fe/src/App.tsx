@@ -6,7 +6,13 @@ import { InputPanel } from './components/InputPanel'
 import { ModeSelector } from './components/ModeSelector'
 import { StatsPanel } from './components/StatsPanel'
 import { SummaryPanel } from './components/SummaryPanel'
-import { calculateTheoreticalThickness, computeMaxImpactSpeed, computeProfile } from './lib/physics'
+import {
+  calculateTheoreticalThickness,
+  computeMaxImpactSpeed,
+  computeMinJerk,
+  computePeakG,
+  computeProfile,
+} from './lib/physics'
 import type { CalculationMode } from './types/physics'
 
 export const AppUI: Component = () => {
@@ -26,6 +32,9 @@ export const AppUI: Component = () => {
 
   // Computed result based on mode
   const result = createMemo(() => {
+    const theoreticalThickness = calculateTheoreticalThickness(foamThickness(), compressionFactor())
+    const targetStopDistance = theoreticalThickness / 100 // convert cm to m
+
     if (mode() === 'thickness') {
       // Mode 1: Calculate thickness from impact speed
       return computeProfile({
@@ -34,14 +43,28 @@ export const AppUI: Component = () => {
         maxG: maxG(),
       })
     }
-    // Mode 2: Calculate max impact speed from thickness
-    const theoreticalThickness = calculateTheoreticalThickness(foamThickness(), compressionFactor())
-    const inverseResult = computeMaxImpactSpeed({
-      targetStopDistance: theoreticalThickness / 100, // convert cm to m
+    if (mode() === 'speed') {
+      // Mode 2: Calculate max impact speed from thickness
+      return computeMaxImpactSpeed({
+        targetStopDistance,
+        jerkG: jerkG(),
+        maxG: maxG(),
+      }).result
+    }
+    if (mode() === 'jerk') {
+      // Mode 3: Calculate min jerk from impact speed and thickness
+      return computeMinJerk({
+        v0: impactSpeed(),
+        targetStopDistance,
+        maxG: maxG(),
+      }).result
+    }
+    // Mode 4: Calculate peak G from impact speed, thickness, and jerk
+    return computePeakG({
+      v0: impactSpeed(),
+      targetStopDistance,
       jerkG: jerkG(),
-      maxG: maxG(),
-    })
-    return inverseResult.result
+    }).result
   })
 
   // Max impact speed (only relevant for mode 2)
@@ -53,6 +76,28 @@ export const AppUI: Component = () => {
       jerkG: jerkG(),
       maxG: maxG(),
     }).maxImpactSpeed
+  })
+
+  // Min jerk (only relevant for mode 3)
+  const minJerkResult = createMemo(() => {
+    if (mode() !== 'jerk') return
+    const theoreticalThickness = calculateTheoreticalThickness(foamThickness(), compressionFactor())
+    return computeMinJerk({
+      v0: impactSpeed(),
+      targetStopDistance: theoreticalThickness / 100,
+      maxG: maxG(),
+    }).minJerk
+  })
+
+  // Peak G (only relevant for mode 4)
+  const peakGResult = createMemo(() => {
+    if (mode() !== 'peakG') return
+    const theoreticalThickness = calculateTheoreticalThickness(foamThickness(), compressionFactor())
+    return computePeakG({
+      v0: impactSpeed(),
+      targetStopDistance: theoreticalThickness / 100,
+      jerkG: jerkG(),
+    }).peakG
   })
 
   const getProfileShapeDescription = () => {
@@ -119,6 +164,8 @@ export const AppUI: Component = () => {
             result={result()}
             compressionFactor={compressionFactor()}
             maxImpactSpeed={maxImpactSpeedResult()}
+            minJerk={minJerkResult()}
+            peakG={peakGResult()}
           />
 
           <div class="grid gap-3 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start">

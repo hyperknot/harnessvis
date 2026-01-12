@@ -232,6 +232,120 @@ export function computeMaxImpactSpeed(params: {
 }
 
 /**
+ * Compute the minimum jerk (G/s) required to stop within a given distance,
+ * given impact speed and max G limit.
+ *
+ * Uses binary search to find the jerkG that produces the target stopDistance.
+ */
+export function computeMinJerk(params: {
+  v0: number // m/s
+  targetStopDistance: number // meters
+  maxG: number
+}): { minJerk: number; result: PhysicsResult } {
+  const { v0, targetStopDistance, maxG } = params
+
+  // Edge cases
+  if (v0 <= 0 || targetStopDistance <= 0 || maxG <= 0) {
+    return {
+      minJerk: 0,
+      result: computeProfile({ v0: 0.001, jerkG: 1, maxG }),
+    }
+  }
+
+  // Binary search for jerkG
+  // Higher jerk = faster ramp up = shorter stopping distance
+  // So we search for the minimum jerk that achieves target distance
+  let low = 1 // G/s - minimum reasonable jerk
+  let high = 100000 // G/s - generous upper bound
+
+  // Binary search with sufficient iterations for precision
+  for (let i = 0; i < 100; i++) {
+    const mid = (low + high) / 2
+    const result = computeProfile({ v0, jerkG: mid, maxG })
+
+    if (!result.ok) {
+      low = mid
+      continue
+    }
+
+    if (Math.abs(result.stopDistance - targetStopDistance) < 1e-9) {
+      return { minJerk: mid, result }
+    }
+
+    // Higher jerk = shorter stop distance
+    if (result.stopDistance > targetStopDistance) {
+      low = mid // need more jerk to stop in less distance
+    } else {
+      high = mid // can use less jerk
+    }
+  }
+
+  const finalJerk = (low + high) / 2
+  return {
+    minJerk: finalJerk,
+    result: computeProfile({ v0, jerkG: finalJerk, maxG }),
+  }
+}
+
+/**
+ * Compute the peak G experienced when stopping within a given distance,
+ * given impact speed and jerk limit.
+ *
+ * This finds what maxG would be required/experienced to stop in the given distance.
+ * Uses binary search to find the peak G that produces the target stopDistance.
+ */
+export function computePeakG(params: {
+  v0: number // m/s
+  targetStopDistance: number // meters
+  jerkG: number
+}): { peakG: number; result: PhysicsResult } {
+  const { v0, targetStopDistance, jerkG } = params
+
+  // Edge cases
+  if (v0 <= 0 || targetStopDistance <= 0 || jerkG <= 0) {
+    return {
+      peakG: 0,
+      result: computeProfile({ v0: 0.001, jerkG, maxG: 1 }),
+    }
+  }
+
+  // Binary search for maxG
+  // Lower maxG limit = longer plateau needed = longer stop distance
+  // Higher maxG limit = can stop faster
+  let low = 0.1 // G - minimum
+  let high = 1000 // G - generous upper bound
+
+  // Binary search with sufficient iterations for precision
+  for (let i = 0; i < 100; i++) {
+    const mid = (low + high) / 2
+    const result = computeProfile({ v0, jerkG, maxG: mid })
+
+    if (!result.ok) {
+      low = mid
+      continue
+    }
+
+    if (Math.abs(result.stopDistance - targetStopDistance) < 1e-9) {
+      return { peakG: result.peakG, result }
+    }
+
+    // Higher maxG = shorter stop distance
+    if (result.stopDistance > targetStopDistance) {
+      low = mid // need higher G to stop in less distance
+    } else {
+      high = mid // can use lower G
+    }
+  }
+
+  const finalMaxG = (low + high) / 2
+  const finalResult = computeProfile({ v0, jerkG, maxG: finalMaxG })
+  return {
+    peakG: finalResult.peakG,
+    result: finalResult,
+  }
+}
+
+/**
  * Helper to generate SamplePoint[] for the 3‑phase profile.
  */
 function buildSamples(params: {
