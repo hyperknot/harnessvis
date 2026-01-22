@@ -296,8 +296,10 @@ export const AppUI: Component = () => {
               disabled={!calc().result.ok}
               onClick={() => {
                 if (calc().result.ok) {
-                  const csv = generateFlatCSV(calc().result)
-                  downloadCSV(csv, 'drop-test-flat.csv')
+                  const r = calc().result
+                  const csv = generateFlatCSV(r)
+                  const filename = `${r.v0.toFixed(1)}-${Math.round(r.peakG)}-${Math.round(r.jerkG)}.csv`
+                  downloadCSV(csv, filename)
                 }
               }}
             >
@@ -309,8 +311,10 @@ export const AppUI: Component = () => {
               disabled={!calc().result.ok}
               onClick={() => {
                 if (calc().result.ok) {
-                  const csv = generateDropCSV(calc().result)
-                  downloadCSV(csv, 'drop-test-drop.csv')
+                  const r = calc().result
+                  const csv = generateDropCSV(r)
+                  const filename = `${r.v0.toFixed(1)}-${Math.round(r.peakG)}-${Math.round(r.jerkG)}.csv`
+                  downloadCSV(csv, filename)
                 }
               }}
             >

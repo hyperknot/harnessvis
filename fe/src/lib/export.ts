@@ -26,16 +26,34 @@ function getAccelAtTime(t: number, result: PhysicsResult): number {
 }
 
 /**
- * Generate CSV for flat format: starts from 0, positive peak, back to 0
+ * Generate CSV for flat format: 20ms padding, positive peak profile, 20ms padding
  */
 export function generateFlatCSV(result: PhysicsResult): string {
   const lines: string[] = ['time0,accel']
-  const numSamples = Math.ceil(result.totalTime * SAMPLE_RATE) + 1
+  const paddingDuration = 0.02 // 20ms
+  const paddingSamples = Math.ceil(paddingDuration * SAMPLE_RATE)
+  const profileSamples = Math.ceil(result.totalTime * SAMPLE_RATE) + 1
 
-  for (let i = 0; i < numSamples; i++) {
-    const t = i * DT
-    const accelG = getAccelAtTime(t, result) / G_CONST
+  let t = 0
+
+  // Leading 20ms padding at 0
+  for (let i = 0; i < paddingSamples; i++) {
+    lines.push(`${t},0`)
+    t += DT
+  }
+
+  // Main profile
+  for (let i = 0; i < profileSamples; i++) {
+    const profileT = i * DT
+    const accelG = getAccelAtTime(profileT, result) / G_CONST
     lines.push(`${t},${accelG}`)
+    t += DT
+  }
+
+  // Trailing 20ms padding at 0
+  for (let i = 0; i < paddingSamples; i++) {
+    lines.push(`${t},0`)
+    t += DT
   }
 
   return lines.join('\n')
