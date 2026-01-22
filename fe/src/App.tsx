@@ -6,6 +6,7 @@ import { InputPanel } from './components/InputPanel'
 import { ModeSelector } from './components/ModeSelector'
 import { StatsPanel } from './components/StatsPanel'
 import { SummaryPanel } from './components/SummaryPanel'
+import { downloadCSV, generateDropCSV, generateFlatCSV } from './lib/export'
 import {
   calculateTheoreticalThickness,
   computeMaxImpactSpeed,
@@ -15,7 +16,6 @@ import {
 } from './lib/physics'
 import type { CalculationMode } from './types/physics'
 
-// URL hash state management
 const DEFAULTS = {
   mode: 'thickness' as CalculationMode,
   impactSpeed: 5.7,
@@ -285,6 +285,40 @@ export const AppUI: Component = () => {
 
         {/* Stats */}
         <StatsPanel result={calc().result} />
+
+        {/* Export buttons */}
+        <div class="p-3 border-t border-black">
+          <h3 class="text-sm font-semibold mb-2">Export drop test</h3>
+          <div class="flex gap-2">
+            <button
+              type="button"
+              class="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!calc().result.ok}
+              onClick={() => {
+                if (calc().result.ok) {
+                  const csv = generateFlatCSV(calc().result)
+                  downloadCSV(csv, 'drop-test-flat.csv')
+                }
+              }}
+            >
+              Flat CSV
+            </button>
+            <button
+              type="button"
+              class="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!calc().result.ok}
+              onClick={() => {
+                if (calc().result.ok) {
+                  const csv = generateDropCSV(calc().result)
+                  downloadCSV(csv, 'drop-test-drop.csv')
+                }
+              }}
+            >
+              Drop CSV
+            </button>
+          </div>
+          <p class="text-xs text-gray-500 mt-2">10 kHz sampling rate</p>
+        </div>
       </div>
     </div>
   )
