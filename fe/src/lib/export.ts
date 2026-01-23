@@ -5,6 +5,36 @@ const SAMPLE_RATE = 10000 // Hz
 const DT = 1 / SAMPLE_RATE // seconds per sample
 
 /**
+ * Generate comment lines with all parameters from the result
+ */
+function generateParamComments(result: PhysicsResult): string[] {
+  return [
+    `# HarnessVis Export`,
+    `# `,
+    `# Input Parameters:`,
+    `#   v0 (impact speed): ${result.v0.toFixed(3)} m/s`,
+    `#   jerkG (jerk limit): ${result.jerkG.toFixed(1)} G/s`,
+    `#   maxG (max allowed G): ${result.maxG.toFixed(1)} G`,
+    `# `,
+    `# Calculated Values:`,
+    `#   profileType: ${result.profileType}`,
+    `#   jerk: ${result.jerk.toFixed(3)} m/s³`,
+    `#   peakG: ${result.peakG.toFixed(3)} G`,
+    `#   peakA: ${result.peakA.toFixed(3)} m/s²`,
+    `#   t1 (ramp time): ${result.t1.toFixed(6)} s`,
+    `#   t2 (plateau time): ${result.t2.toFixed(6)} s`,
+    `#   totalTime: ${result.totalTime.toFixed(6)} s`,
+    `#   stopDistance: ${result.stopDistance.toFixed(6)} m`,
+    `# `,
+    `# Safety Metrics:`,
+    `#   gLimitReached: ${result.gLimitReached}`,
+    `#   timeOver38G: ${result.timeOver38G.toFixed(6)} s`,
+    `#   timeOver20G: ${result.timeOver20G.toFixed(6)} s`,
+    `# `,
+  ]
+}
+
+/**
  * Get acceleration (m/s²) at time t for the 3-phase profile
  */
 function getAccelAtTime(t: number, result: PhysicsResult): number {
@@ -29,7 +59,7 @@ function getAccelAtTime(t: number, result: PhysicsResult): number {
  * Generate CSV for flat format: 20ms padding, positive peak profile, 20ms padding
  */
 export function generateFlatCSV(result: PhysicsResult): string {
-  const lines: string[] = ['time0,accel']
+  const lines: string[] = [...generateParamComments(result), 'time0,accel']
   const paddingDuration = 0.02 // 20ms
   const paddingSamples = Math.ceil(paddingDuration * SAMPLE_RATE)
   const profileSamples = Math.ceil(result.totalTime * SAMPLE_RATE) + 1
@@ -67,7 +97,7 @@ export function generateFlatCSV(result: PhysicsResult): string {
  * - Final -1 G
  */
 export function generateDropCSV(result: PhysicsResult): string {
-  const lines: string[] = ['time0,accel']
+  const lines: string[] = [...generateParamComments(result), 'time0,accel']
 
   // Calculate freefall duration: v = g * t => t = v0 / g
   const freefallDuration = result.v0 / G_CONST
