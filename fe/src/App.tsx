@@ -240,7 +240,16 @@ export const AppUI: Component = () => {
             >
               Open source
             </a>
-            {' project by Zsolt Ero. '}
+            {' project by '}
+            <a
+              href="https://hyperknot.com/hyperpilot/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-blue-600 hover:underline"
+            >
+              Zsolt Ero
+            </a>
+            {'. '}
             <a
               href="https://github.com/hyperknot/harnessvis/blob/main/fe/src/lib/physics.ts"
               target="_blank"
@@ -248,6 +257,17 @@ export const AppUI: Component = () => {
               class="text-blue-600 hover:underline"
             >
               Physics
+            </a>
+          </p>
+          <p class="text-xs text-gray-600 mt-0.5">
+            {'More tools and research: '}
+            <a
+              href="https://hyperknot.com/hyperpilot/harness-back-protectors/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-blue-600 hover:underline"
+            >
+              Harness Back Protectors
             </a>
           </p>
         </div>
